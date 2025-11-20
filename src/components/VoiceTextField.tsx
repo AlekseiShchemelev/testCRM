@@ -1,5 +1,5 @@
 // src/components/VoiceTextField.tsx
-import { useState, useRef, useEffect, memo } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   TextField,
   Box,
@@ -52,7 +52,7 @@ interface VoiceTextFieldProps {
   placeholder?: string;
 }
 
-const VoiceTextField = memo(function VoiceTextField({
+export default function VoiceTextField({
   label,
   name,
   value,
@@ -85,11 +85,13 @@ const VoiceTextField = memo(function VoiceTextField({
   const isInitialized = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const onVoiceInputRef = useRef(onVoiceInput);
-
-  // Обновляем ref при изменении onVoiceInput
-  onVoiceInputRef.current = onVoiceInput;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  // Обновляем ref при изменении onVoiceInput
+  useEffect(() => {
+    onVoiceInputRef.current = onVoiceInput;
+  }, [onVoiceInput]);
 
   // Проверка поддержки Speech Recognition
   useEffect(() => {
@@ -486,6 +488,4 @@ const VoiceTextField = memo(function VoiceTextField({
       </Popover>
     </Box>
   );
-});
-
-export default VoiceTextField;
+}
