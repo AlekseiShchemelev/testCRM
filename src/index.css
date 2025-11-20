@@ -1,0 +1,167 @@
+/* index.css - Базовые стили для Material-UI приложения */
+
+:root {
+  font-family: "Roboto", "Arial", sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  /* Цветовая схема для светлой темы */
+  color-scheme: light;
+  --primary-color: #1976d2;
+  --secondary-color: #dc004e;
+  --background-color: #f8fafc;
+  --surface-color: #ffffff;
+  --text-primary: #212121;
+  --text-secondary: #757575;
+  --border-color: #e0e0e0;
+
+  /* Оптимизация текста */
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Темная тема (если понадобится) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --background-color: #121212;
+    --surface-color: #1e1e1e;
+    --text-primary: #ffffff;
+    --text-secondary: #b3b3b3;
+    --border-color: #333333;
+  }
+}
+
+/* Сброс стилей и базовая настройка */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  min-width: 320px;
+  background-color: var(--background-color);
+  color: var(--text-primary);
+  overflow-x: hidden; /* Предотвращение горизонтального скролла */
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Улучшение доступности */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* Стили для ссылок */
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
+}
+
+a:hover {
+  color: var(--secondary-color);
+  text-decoration: underline;
+}
+
+/* Утилиты для адаптивности */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Оптимизация изображений */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Предотвращение переполнения */
+.container-fluid {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Адаптивные медиа-запросы */
+@media (max-width: 600px) {
+  body {
+    font-size: 14px;
+  }
+
+  /* Уменьшаем отступы для мобильных */
+  .container-fluid {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 960px) {
+  body {
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 961px) {
+  body {
+    font-size: 16px;
+  }
+}
+
+/* Оптимизация производительности */
+.will-change-transform {
+  will-change: transform;
+}
+
+.will-change-opacity {
+  will-change: opacity;
+}
+
+/* Плавные переходы */
+.transition-all {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Утилиты для скрытия контента на разных размерах экрана */
+.hide-mobile {
+  display: block;
+}
+
+.hide-desktop {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .hide-mobile {
+    display: none;
+  }
+
+  .hide-desktop {
+    display: block;
+  }
+}

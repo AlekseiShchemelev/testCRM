@@ -1,0 +1,78 @@
+/* App.css - Основные стили приложения */
+
+/* Контейнер приложения */
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Основные утилитарные классы */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f8fafc;
+}
+
+.main-content {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 16px;
+}
+
+.content-wrapper {
+  width: 100%;
+  max-width: 1200px;
+}
+
+/* Адаптивные медиа-запросы */
+@media (max-width: 600px) {
+  .main-content {
+    padding: 8px;
+  }
+
+  .content-wrapper {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 1200px) {
+  .content-wrapper {
+    max-width: 1200px;
+  }
+}
+
+/* Анимации для улучшения UX */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Оптимизация скролла */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Утилиты для отступов */
+.no-padding {
+  padding: 0 !important;
+}
+
+.no-margin {
+  margin: 0 !important;
+}
