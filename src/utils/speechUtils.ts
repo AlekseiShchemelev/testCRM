@@ -294,10 +294,6 @@ const getErrorMessage = (error: string): string => {
     "speech-unavailable": "Речь недоступна.",
     "speech-input-too-short": "Слишком короткий ввод.",
     "speech-input-too-long": "Слишком длинный ввод.",
-    network: "Ошибка сети.",
-    "audio-capture": "Ошибка захвата аудио.",
-    "not-allowed": "Доступ запрещен.",
-    aborted: "Операция прервана.",
   };
 
   return errorMessages[error] || `Неизвестная ошибка: ${error}`;

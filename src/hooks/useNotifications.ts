@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { Snackbar, Alert, AlertTitle } from "@mui/material";
 
 export type NotificationVariant = "success" | "error" | "warning" | "info";

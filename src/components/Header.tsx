@@ -177,7 +177,7 @@ export default function Header() {
                         ? "ClientsPage"
                         : item.path.slice(1).charAt(0).toUpperCase() +
                           item.path.slice(2)
-                    }Page`
+                    }Page.tsx`
                   ),
                 `${item.path}Page`
               )}
@@ -234,7 +234,7 @@ export default function Header() {
                         item.path === "/calendar"
                           ? "CalendarPage"
                           : "ProfilePage"
-                      }`
+                      }.tsx`
                     ),
                   `${item.path}Page`
                 )}

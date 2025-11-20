@@ -211,7 +211,6 @@ export default function ClientsPage() {
             height: { xs: 48, sm: 56 },
             borderRadius: "12px",
             bgcolor: "primary.main",
-            "&:hover": { bgcolor: "primary.dark" },
             "&:disabled": {
               bgcolor: "action.disabledBackground",
               color: "action.disabled",
@@ -221,6 +220,7 @@ export default function ClientsPage() {
             fontWeight: 600,
             boxShadow: "0 2px 8px rgba(25, 118, 210, 0.2)",
             "&:hover": {
+              bgcolor: "primary.dark",
               boxShadow: "0 4px 12px rgba(25, 118, 210, 0.3)",
             },
             transition: "all 0.2s ease-in-out",
