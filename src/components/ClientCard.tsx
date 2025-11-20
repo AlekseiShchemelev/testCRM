@@ -1,5 +1,5 @@
 // src/components/ClientCard.tsx
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardMedia, Typography, Box } from "@mui/material";
 import ActionMenu from "./ActionMenu";
 import PropertyGallery from "./PropertyGallery";
@@ -29,10 +29,10 @@ export default function ClientCard({
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [galleryPhotos, setGalleryPhotos] = useState<string[]>([]);
 
-  const openPropertyGallery = (photos: string[]) => {
+  const openPropertyGallery = useCallback((photos: string[]) => {
     setGalleryPhotos(photos);
     setIsGalleryOpen(true);
-  };
+  }, []);
 
   return (
     <Card
@@ -72,9 +72,20 @@ export default function ClientCard({
             borderRadius: "8px",
             objectFit: "cover",
             flexShrink: 0,
+            cursor: client.propertyPhotos?.length ? "pointer" : "default",
+            transition: "transform 0.2s ease-in-out",
+            "&:hover": client.propertyPhotos?.length
+              ? { transform: "scale(1.05)" }
+              : {},
           }}
           image={client.propertyPhotos?.[0] || "/default-avatar.png"}
           alt="Фото объекта"
+          onClick={() => {
+            if (client.propertyPhotos?.length) {
+              openPropertyGallery(client.propertyPhotos);
+            }
+          }}
+          title="Нажмите для просмотра фото"
         />
         {client.propertyPhotos && client.propertyPhotos.length > 1 && (
           <Box
