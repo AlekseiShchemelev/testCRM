@@ -32,18 +32,18 @@ export default function PropertyGallery({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  // Проверяем наличие фотографий
-  if (!photos.length) {
-    return null;
-  }
-
   const goToNext = useCallback(() => {
     setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
-  }, []);
+  }, [photos.length]);
 
   const goToPrev = useCallback(() => {
     setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
-  }, []);
+  }, [photos.length]);
+
+  // Проверяем наличие фотографий ПОСЛЕ всех хуков
+  if (!photos.length) {
+    return null;
+  }
 
   // Обработка клавиатурной навигации
   useEffect(() => {
