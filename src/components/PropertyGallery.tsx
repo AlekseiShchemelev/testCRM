@@ -19,14 +19,16 @@ interface PropertyGalleryProps {
   open: boolean;
   onClose: () => void;
   photos: string[];
+  initialIndex?: number | null;
 }
 
 export default function PropertyGallery({
   open,
   onClose,
   photos,
+  initialIndex = 0,
 }: PropertyGalleryProps) {
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(initialIndex);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -79,6 +81,13 @@ export default function PropertyGallery({
       setCurrentPhotoIndex(0);
     }
   }, [photos.length, currentPhotoIndex]);
+
+  // Обновление индекса при изменении initialIndex
+  useEffect(() => {
+    if (initialIndex !== undefined && initialIndex !== null) {
+      setCurrentPhotoIndex(initialIndex);
+    }
+  }, [initialIndex]);
 
   if (!open) return null;
 

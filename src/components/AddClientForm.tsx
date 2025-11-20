@@ -24,6 +24,7 @@ import { addHistoryEntry } from "../services/historyService";
 import { useNotifications } from "../hooks/useNotifications";
 import type { Client } from "../types";
 import VoiceTextField from "./VoiceTextField";
+import PropertyGallery from "./PropertyGallery";
 
 interface AddClientFormProps {
   open: boolean;
@@ -274,20 +275,6 @@ export default function AddClientForm({
 
   const closePhotoViewer = () => {
     setSelectedPhotoIndex(null);
-  };
-
-  const navigatePhoto = (direction: "prev" | "next") => {
-    if (selectedPhotoIndex === null) return;
-
-    if (direction === "prev") {
-      setSelectedPhotoIndex(
-        selectedPhotoIndex > 0 ? selectedPhotoIndex - 1 : photos.length - 1
-      );
-    } else {
-      setSelectedPhotoIndex(
-        selectedPhotoIndex < photos.length - 1 ? selectedPhotoIndex + 1 : 0
-      );
-    }
   };
 
   const title = client ? "Редактировать клиента" : "Добавить нового клиента";
@@ -568,112 +555,13 @@ export default function AddClientForm({
         </Button>
       </DialogActions>
 
-      {/* Полноэкранный просмотр фото */}
-      {selectedPhotoIndex !== null && photos[selectedPhotoIndex] && (
-        <Box
-          sx={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.9)",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-          }}
-          onClick={closePhotoViewer}
-        >
-          <Box
-            sx={{
-              position: "relative",
-              maxWidth: "90vw",
-              maxHeight: "90vh",
-              display: "flex",
-              alignItems: "center",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <img
-              src={photos[selectedPhotoIndex]}
-              alt={`Фото ${selectedPhotoIndex + 1}`}
-              style={{
-                maxWidth: "100%",
-                maxHeight: "100%",
-                objectFit: "contain",
-                borderRadius: "8px",
-              }}
-            />
-
-            {/* Кнопка закрытия */}
-            <IconButton
-              onClick={closePhotoViewer}
-              sx={{
-                position: "absolute",
-                top: -40,
-                right: 0,
-                color: "white",
-                backgroundColor: "rgba(0, 0, 0, 0.5)",
-                "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.7)" },
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
-
-            {/* Кнопки навигации */}
-            {photos.length > 1 && (
-              <>
-                <IconButton
-                  onClick={() => navigatePhoto("prev")}
-                  sx={{
-                    position: "absolute",
-                    left: -50,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "white",
-                    backgroundColor: "rgba(0, 0, 0, 0.5)",
-                    "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.7)" },
-                  }}
-                >
-                  <ChevronLeft fontSize="large" />
-                </IconButton>
-                <IconButton
-                  onClick={() => navigatePhoto("next")}
-                  sx={{
-                    position: "absolute",
-                    right: -50,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "white",
-                    backgroundColor: "rgba(0, 0, 0, 0.5)",
-                    "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.7)" },
-                  }}
-                >
-                  <ChevronRight fontSize="large" />
-                </IconButton>
-              </>
-            )}
-
-            {/* Счетчик фото */}
-            {photos.length > 1 && (
-              <Typography
-                sx={{
-                  position: "absolute",
-                  bottom: -40,
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  color: "white",
-                  fontSize: "0.9rem",
-                }}
-              >
-                {selectedPhotoIndex + 1} из {photos.length}
-              </Typography>
-            )}
-          </Box>
-        </Box>
-      )}
+      {/* Галерея фотографий */}
+      <PropertyGallery
+        open={selectedPhotoIndex !== null}
+        onClose={closePhotoViewer}
+        photos={photos}
+        initialIndex={selectedPhotoIndex}
+      />
     </Dialog>
   );
 }

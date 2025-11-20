@@ -1,5 +1,5 @@
 // src/components/VoiceTextField.tsx
-import { useState, useCallback, useRef, useEffect, memo } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import {
   TextField,
   Box,
@@ -142,7 +142,7 @@ const VoiceTextField = memo(function VoiceTextField({
   }, []);
 
   // Обработка голосового ввода
-  const handleVoiceInput = useCallback(async () => {
+  const handleVoiceInput = async () => {
     if (!isSupported) {
       setError(
         "Голосовой ввод не поддерживается в этом браузере. Используйте Chrome или Edge."
@@ -212,14 +212,7 @@ const VoiceTextField = memo(function VoiceTextField({
       setIsProcessing(false);
       setInterimTranscript("");
     }
-  }, [
-    isSupported,
-    isRecording,
-    isProcessing,
-    currentLanguage,
-    confidenceThreshold,
-    autoRestart,
-  ]);
+  };
 
   // Автоматическое скрытие ошибки
   useEffect(() => {
@@ -237,10 +230,10 @@ const VoiceTextField = memo(function VoiceTextField({
   }, [error]);
 
   // Обработка изменения языка
-  const handleLanguageChange = useCallback((newLanguage: SupportedLanguage) => {
+  const handleLanguageChange = (newLanguage: SupportedLanguage) => {
     setCurrentLanguage(newLanguage);
     setSettingsAnchor(null);
-  }, []);
+  };
 
   // Получение статуса распознавания
   const recognitionStatus = getRecognitionStatus();

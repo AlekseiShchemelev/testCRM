@@ -82,7 +82,10 @@ export default function ClientCard({
               ? { transform: "scale(1.05)" }
               : {},
           }}
-          image={client.propertyPhotos?.[0] || "/default-avatar.png"}
+          image={
+            client.propertyPhotos?.[0] ||
+            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHZpZXdCb3g9IjAgMCA3MCA3MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzUiIGN5PSIzNSIgcj0iMzUiIGZpbGw9IiNGM0Y0RjYiLz4KPHN2ZyB4PSIyMCIgeT0iMjAiIHdpZHRoPSIzMCIgaGVpZ2h0PSIzMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiI+CjxwYXRoIGQ9Ik0yMSAxMWMtMS42MTYgMC0zIDEuMzg0LTMgM3MzIDEuMzg0IDMgMyAzdjJjMCAxLjYxNi0xLjM4NCAzLTMgM0MtNS4zODYgMjEuNSA0IDE5LjEwNCA0IDE3VjE0YzAtMS42MTYgMS4zODQtMyAzLTN6bTAgMmMtMi4yMDcgMC00IDEuNzkzLTQgNEMxNyAxNC43OTcgMTguMjA3IDEzIDE5IDEzYzEuNzkzIDAgMyAxLjc5MyAzIDRjMCAyLjIwNy0xLjIwNyA0LTQgNHptMCA0Yy0zLjMyNCAwLTEwIDEuNjc2LTEwIDZWNWMwIDQuMzI0IDYuNjc2IDYgMTAgNnMxMC0xLjY3NiAxMC02VjE5YzAtNC4zMjQtNi42NzYtNi0xMC02eiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4KPC9zdmc+"
+          }
           alt="Фото объекта"
           onClick={() => {
             if (client.propertyPhotos?.length) {
