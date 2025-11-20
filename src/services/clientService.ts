@@ -30,25 +30,66 @@ const handleNetworkError = (err: any) => {
 };
 
 // Валидация данных клиента
-const validateClientData = (client: Partial<Client>): string[] => {
+const validateClientData = (
+  client: Partial<Client>,
+  isUpdate = false
+): string[] => {
   const errors: string[] = [];
 
-  if (!client.fullName?.trim()) {
-    errors.push("ФИО обязательно для заполнения");
+  if (isUpdate) {
+    // При обновлении валидируем только непустые поля
+    // Пропускаем валидацию пустых полей, чтобы пользователь мог очищать поля
+    if (
+      client.fullName !== undefined &&
+      client.fullName.trim() &&
+      client.fullName.trim().length === 0
+    ) {
+      errors.push("ФИО не может быть пустым при обновлении");
+    }
+
+    if (
+      client.phone !== undefined &&
+      client.phone.trim() &&
+      client.phone.trim().length === 0
+    ) {
+      errors.push("Телефон не может быть пустым при обновлении");
+    }
+
+    if (
+      client.address !== undefined &&
+      client.address.trim() &&
+      client.address.trim().length === 0
+    ) {
+      errors.push("Адрес не может быть пустым при обновлении");
+    }
+
+    if (
+      client.meetingDate !== undefined &&
+      client.meetingDate.trim() &&
+      client.meetingDate.trim().length === 0
+    ) {
+      errors.push("Дата и время встречи не могут быть пустыми при обновлении");
+    }
+  } else {
+    // При создании требуем все обязательные поля
+    if (!client.fullName?.trim()) {
+      errors.push("ФИО обязательно для заполнения");
+    }
+
+    if (!client.phone?.trim()) {
+      errors.push("Телефон обязателен для заполнения");
+    }
+
+    if (!client.address?.trim()) {
+      errors.push("Адрес обязателен для заполнения");
+    }
+
+    if (!client.meetingDate?.trim()) {
+      errors.push("Дата и время встречи обязательны для заполнения");
+    }
   }
 
-  if (!client.phone?.trim()) {
-    errors.push("Телефон обязателен для заполнения");
-  }
-
-  if (!client.address?.trim()) {
-    errors.push("Адрес обязателен для заполнения");
-  }
-
-  if (!client.meetingDate?.trim()) {
-    errors.push("Дата и время встречи обязательны для заполнения");
-  }
-
+  // Проверка формата телефона (если поле передано)
   if (client.phone && !/^[\d\s\-\+\(\)]+$/.test(client.phone)) {
     errors.push("Некорректный формат телефона");
   }
@@ -87,7 +128,7 @@ export const addClient = async (
   if (!userId) throw new Error("Пользователь не авторизован");
 
   // Валидация данных
-  const validationErrors = validateClientData(client);
+  const validationErrors = validateClientData(client, false);
   if (validationErrors.length > 0) {
     throw new Error(`Ошибка валидации: ${validationErrors.join(", ")}`);
   }
@@ -117,7 +158,7 @@ export const updateClient = async (id: string, updates: Partial<Client>) => {
   if (!userId) throw new Error("Пользователь не авторизован");
 
   // Валидация обновляемых данных (только для непустых полей)
-  const validationErrors = validateClientData(updates);
+  const validationErrors = validateClientData(updates, true);
   if (validationErrors.length > 0) {
     throw new Error(`Ошибка валидации: ${validationErrors.join(", ")}`);
   }
