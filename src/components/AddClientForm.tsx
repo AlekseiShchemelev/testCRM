@@ -16,6 +16,8 @@ import {
   Close as CloseIcon,
   AddAPhoto as AddAPhotoIcon,
   Link as LinkIcon,
+  ChevronLeft,
+  ChevronRight,
 } from "@mui/icons-material";
 import { addClient, updateClient } from "../services/clientService";
 import { addHistoryEntry } from "../services/historyService";
@@ -60,6 +62,10 @@ export default function AddClientForm({
 
   const [formData, setFormData] = useState(initialData);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(
+    null
+  );
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const { showSuccess, showError } = useNotifications();
 
@@ -105,14 +111,38 @@ export default function AddClientForm({
     if (!files) return;
 
     const newPhotos: string[] = [];
+    let processedCount = 0;
+
     Array.from(files).forEach((file) => {
+      // Проверяем тип файла (только изображения)
+      if (!file.type.startsWith("image/")) {
+        console.warn(
+          `Файл ${file.name} не является изображением и будет пропущен`
+        );
+        processedCount++;
+        return;
+      }
+
+      // Убираем ограничения по размеру файла - принимаем любые размеры
       const reader = new FileReader();
       reader.onload = () => {
         newPhotos.push(reader.result as string);
-        if (newPhotos.length === files.length) {
+        processedCount++;
+
+        // Когда все файлы обработаны, обновляем состояние
+        if (processedCount === files.length) {
           setPhotos((prev) => [...prev, ...newPhotos]);
         }
       };
+
+      reader.onerror = () => {
+        console.error(`Ошибка при чтении файла ${file.name}`);
+        processedCount++;
+        if (processedCount === files.length) {
+          setPhotos((prev) => [...prev, ...newPhotos]);
+        }
+      };
+
       reader.readAsDataURL(file);
     });
   };
@@ -121,7 +151,36 @@ export default function AddClientForm({
     setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Клиентская валидация
+  const validateForm = (): boolean => {
+    const errors: string[] = [];
+
+    if (!formData.fullName?.trim()) {
+      errors.push("ФИО обязательно для заполнения");
+    }
+
+    if (!formData.phone?.trim()) {
+      errors.push("Телефон обязателен для заполнения");
+    }
+
+    if (!formData.address?.trim()) {
+      errors.push("Адрес обязателен для заполнения");
+    }
+
+    if (!formData.meetingDate?.trim()) {
+      errors.push("Дата и время встречи обязательны для заполнения");
+    }
+
+    setValidationErrors(errors);
+    return errors.length === 0;
+  };
+
   const handleSave = async () => {
+    // Клиентская валидация
+    if (!validateForm()) {
+      return;
+    }
+
     try {
       const clientData: Omit<Client, "id" | "createdAt"> = {
         fullName: formData.fullName,
@@ -164,6 +223,28 @@ export default function AddClientForm({
     }
   };
 
+  const handlePhotoClick = (index: number) => {
+    setSelectedPhotoIndex(index);
+  };
+
+  const closePhotoViewer = () => {
+    setSelectedPhotoIndex(null);
+  };
+
+  const navigatePhoto = (direction: "prev" | "next") => {
+    if (selectedPhotoIndex === null) return;
+
+    if (direction === "prev") {
+      setSelectedPhotoIndex(
+        selectedPhotoIndex > 0 ? selectedPhotoIndex - 1 : photos.length - 1
+      );
+    } else {
+      setSelectedPhotoIndex(
+        selectedPhotoIndex < photos.length - 1 ? selectedPhotoIndex + 1 : 0
+      );
+    }
+  };
+
   const title = client ? "Редактировать клиента" : "Добавить нового клиента";
 
   return (
@@ -197,6 +278,28 @@ export default function AddClientForm({
       </DialogTitle>
 
       <DialogContent sx={{ p: 2.5 }}>
+        {/* Отображение ошибок валидации */}
+        {validationErrors.length > 0 && (
+          <Box
+            sx={{
+              mb: 2,
+              p: 1.5,
+              borderRadius: "12px",
+              backgroundColor: "error.light",
+              color: "error.contrastText",
+            }}
+          >
+            <Typography variant="body2" fontWeight="bold" gutterBottom>
+              Пожалуйста, исправьте следующие ошибки:
+            </Typography>
+            {validationErrors.map((error, index) => (
+              <Typography key={index} variant="body2" sx={{ ml: 1 }}>
+                • {error}
+              </Typography>
+            ))}
+          </Box>
+        )}
+
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
           <VoiceTextField
             label="ФИО"
@@ -327,7 +430,10 @@ export default function AddClientForm({
                           height: 80,
                           objectFit: "cover",
                           borderRadius: "12px",
+                          cursor: "pointer",
                         }}
+                        onClick={() => handlePhotoClick(index)}
+                        title="Нажмите для полноэкранного просмотра"
                       />
                       <IconButton
                         size="small"
@@ -376,6 +482,113 @@ export default function AddClientForm({
           {client ? "Сохранить" : "Добавить"}
         </Button>
       </DialogActions>
+
+      {/* Полноэкранный просмотр фото */}
+      {selectedPhotoIndex !== null && photos[selectedPhotoIndex] && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.9)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+          }}
+          onClick={closePhotoViewer}
+        >
+          <Box
+            sx={{
+              position: "relative",
+              maxWidth: "90vw",
+              maxHeight: "90vh",
+              display: "flex",
+              alignItems: "center",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={photos[selectedPhotoIndex]}
+              alt={`Фото ${selectedPhotoIndex + 1}`}
+              style={{
+                maxWidth: "100%",
+                maxHeight: "100%",
+                objectFit: "contain",
+                borderRadius: "8px",
+              }}
+            />
+
+            {/* Кнопка закрытия */}
+            <IconButton
+              onClick={closePhotoViewer}
+              sx={{
+                position: "absolute",
+                top: -40,
+                right: 0,
+                color: "white",
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.7)" },
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+
+            {/* Кнопки навигации */}
+            {photos.length > 1 && (
+              <>
+                <IconButton
+                  onClick={() => navigatePhoto("prev")}
+                  sx={{
+                    position: "absolute",
+                    left: -50,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "white",
+                    backgroundColor: "rgba(0, 0, 0, 0.5)",
+                    "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.7)" },
+                  }}
+                >
+                  <ChevronLeft fontSize="large" />
+                </IconButton>
+                <IconButton
+                  onClick={() => navigatePhoto("next")}
+                  sx={{
+                    position: "absolute",
+                    right: -50,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "white",
+                    backgroundColor: "rgba(0, 0, 0, 0.5)",
+                    "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.7)" },
+                  }}
+                >
+                  <ChevronRight fontSize="large" />
+                </IconButton>
+              </>
+            )}
+
+            {/* Счетчик фото */}
+            {photos.length > 1 && (
+              <Typography
+                sx={{
+                  position: "absolute",
+                  bottom: -40,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  color: "white",
+                  fontSize: "0.9rem",
+                }}
+              >
+                {selectedPhotoIndex + 1} из {photos.length}
+              </Typography>
+            )}
+          </Box>
+        </Box>
+      )}
     </Dialog>
   );
 }
