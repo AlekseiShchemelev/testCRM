@@ -1,5 +1,5 @@
 // src/pages/ClientsPage.tsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Box,
   Typography,
@@ -31,6 +31,9 @@ export default function ClientsPage() {
   }>({ open: false, client: null });
   const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Используем ref для хранения клиента для удаления
+  const clientToDeleteRef = useRef<Client | null>(null);
 
   const { showNotification } = useNotifications();
 
@@ -80,7 +83,9 @@ export default function ClientsPage() {
     async (id: string, updatedData: Partial<Client>) => {
       try {
         await updateClient(id, updatedData);
-        loadClients();
+        // Вызываем loadClients напрямую, чтобы избежать проблем с зависимостями
+        const data = await getClients();
+        setClients(data);
       } catch (error: any) {
         showNotification(
           error.message || "Не удалось обновить данные клиента",
@@ -88,33 +93,31 @@ export default function ClientsPage() {
         );
       }
     },
-    [loadClients]
+    []
   );
 
   const handleDeleteClient = useCallback((client: Client) => {
+    clientToDeleteRef.current = client;
     setDeleteConfirm({ open: true, client });
   }, []);
 
   const confirmDelete = useCallback(async () => {
-    if (!deleteConfirm.client) return;
+    const client = clientToDeleteRef.current;
+    if (!client) return;
 
     setDeleting(true);
     try {
-      await deleteClient(deleteConfirm.client.id!);
-      setClients((prev) =>
-        prev.filter((c) => c.id !== deleteConfirm.client!.id)
-      );
-      showNotification(
-        `Клиент "${deleteConfirm.client.fullName}" удален`,
-        "success"
-      );
+      await deleteClient(client.id!);
+      setClients((prev) => prev.filter((c) => c.id !== client.id));
+      showNotification(`Клиент "${client.fullName}" удален`, "success");
       setDeleteConfirm({ open: false, client: null });
+      clientToDeleteRef.current = null;
     } catch (error: any) {
       showNotification(error.message || "Не удалось удалить клиента", "error");
     } finally {
       setDeleting(false);
     }
-  }, [deleteConfirm.client]);
+  }, []);
 
   const cancelDelete = () => {
     setDeleteConfirm({ open: false, client: null });
