@@ -17,7 +17,7 @@ import {
   usePreloadComponents,
   preloadMainPages,
 } from "./hooks/usePreloadComponents";
-import { NotificationsContainer } from "./hooks/useNotifications";
+import { NotificationsContainer } from "./hooks/useNotifications.tsx";
 
 // Lazy loading для оптимизации производительности
 const ClientsPage = lazy(() => import("./pages/ClientsPage"));
