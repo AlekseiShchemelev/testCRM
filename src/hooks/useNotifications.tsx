@@ -82,10 +82,10 @@ export const useNotifications = () => {
   );
 
   // Обновляем локальный стейт при изменениях
-  useState(() => {
+  React.useEffect(() => {
     const unsubscribe = subscribe(setNotifications);
     return unsubscribe;
-  });
+  }, []);
 
   const showSuccess = useCallback(
     (

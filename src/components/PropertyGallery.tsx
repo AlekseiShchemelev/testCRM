@@ -35,6 +35,14 @@ export default function PropertyGallery({
     return null;
   }
 
+  const goToNext = useCallback(() => {
+    setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
+  }, []);
+
+  const goToPrev = useCallback(() => {
+    setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
+  }, []);
+
   // Обработка клавиатурной навигации
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -63,7 +71,7 @@ export default function PropertyGallery({
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "unset";
     };
-  }, [open, onClose]);
+  }, [open, onClose, goToNext, goToPrev]);
 
   // Сброс индекса при смене фотографий
   useEffect(() => {
@@ -71,14 +79,6 @@ export default function PropertyGallery({
       setCurrentPhotoIndex(0);
     }
   }, [photos.length, currentPhotoIndex]);
-
-  const goToNext = useCallback(() => {
-    setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
-  }, [photos.length]);
-
-  const goToPrev = useCallback(() => {
-    setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
-  }, [photos.length]);
 
   if (!open) return null;
 
