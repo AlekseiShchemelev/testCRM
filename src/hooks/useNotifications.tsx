@@ -71,15 +71,14 @@ export const useNotifications = () => {
   ]);
 
   // Подписываемся на изменения
-  const subscribe = useCallback(
-    (listener: (notifications: NotificationState[]) => void) => {
-      listeners.push(listener);
-      return () => {
-        listeners = listeners.filter((l) => l !== listener);
-      };
-    },
-    []
-  );
+  const subscribe = (
+    listener: (notifications: NotificationState[]) => void
+  ) => {
+    listeners.push(listener);
+    return () => {
+      listeners = listeners.filter((l) => l !== listener);
+    };
+  };
 
   // Обновляем локальный стейт при изменениях
   React.useEffect(() => {
@@ -87,45 +86,33 @@ export const useNotifications = () => {
     return unsubscribe;
   }, []);
 
-  const showSuccess = useCallback(
-    (
-      message: string,
-      options?: Omit<NotificationState, "id" | "message" | "variant">
-    ) => {
-      return showNotification(message, "success", options);
-    },
-    []
-  );
+  const showSuccess = (
+    message: string,
+    options?: Omit<NotificationState, "id" | "message" | "variant">
+  ) => {
+    return showNotification(message, "success", options);
+  };
 
-  const showError = useCallback(
-    (
-      message: string,
-      options?: Omit<NotificationState, "id" | "message" | "variant">
-    ) => {
-      return showNotification(message, "error", options);
-    },
-    []
-  );
+  const showError = (
+    message: string,
+    options?: Omit<NotificationState, "id" | "message" | "variant">
+  ) => {
+    return showNotification(message, "error", options);
+  };
 
-  const showWarning = useCallback(
-    (
-      message: string,
-      options?: Omit<NotificationState, "id" | "message" | "variant">
-    ) => {
-      return showNotification(message, "warning", options);
-    },
-    []
-  );
+  const showWarning = (
+    message: string,
+    options?: Omit<NotificationState, "id" | "message" | "variant">
+  ) => {
+    return showNotification(message, "warning", options);
+  };
 
-  const showInfo = useCallback(
-    (
-      message: string,
-      options?: Omit<NotificationState, "id" | "message" | "variant">
-    ) => {
-      return showNotification(message, "info", options);
-    },
-    []
-  );
+  const showInfo = (
+    message: string,
+    options?: Omit<NotificationState, "id" | "message" | "variant">
+  ) => {
+    return showNotification(message, "info", options);
+  };
 
   const hide = useCallback((id: string) => {
     hideNotification(id);

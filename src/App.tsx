@@ -56,7 +56,7 @@ function App() {
 
   useEffect(() => {
     preloadMainPages(preloadComponent);
-  }, [preloadComponent]);
+  }, []);
 
   return (
     <BrowserRouter>
