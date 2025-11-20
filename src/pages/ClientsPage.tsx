@@ -32,7 +32,7 @@ export default function ClientsPage() {
   const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const { showSuccess, showError, showWarning } = useNotifications();
+  const { showNotification } = useNotifications();
 
   const loadClients = useCallback(async () => {
     setLoading(true);
@@ -40,11 +40,14 @@ export default function ClientsPage() {
       const data = await getClients();
       setClients(data);
     } catch (error: any) {
-      showError(error.message || "Не удалось загрузить список клиентов");
+      showNotification(
+        error.message || "Не удалось загрузить список клиентов",
+        "error"
+      );
     } finally {
       setLoading(false);
     }
-  }, [showError]);
+  }, []);
 
   useEffect(() => {
     loadClients();
@@ -79,10 +82,13 @@ export default function ClientsPage() {
         await updateClient(id, updatedData);
         loadClients();
       } catch (error: any) {
-        showError(error.message || "Не удалось обновить данные клиента");
+        showNotification(
+          error.message || "Не удалось обновить данные клиента",
+          "error"
+        );
       }
     },
-    [loadClients, showError]
+    [loadClients]
   );
 
   const handleDeleteClient = useCallback((client: Client) => {
@@ -98,49 +104,46 @@ export default function ClientsPage() {
       setClients((prev) =>
         prev.filter((c) => c.id !== deleteConfirm.client!.id)
       );
-      showSuccess(`Клиент "${deleteConfirm.client.fullName}" удален`);
+      showNotification(
+        `Клиент "${deleteConfirm.client.fullName}" удален`,
+        "success"
+      );
       setDeleteConfirm({ open: false, client: null });
     } catch (error: any) {
-      showError(error.message || "Не удалось удалить клиента");
+      showNotification(error.message || "Не удалось удалить клиента", "error");
     } finally {
       setDeleting(false);
     }
-  }, [deleteConfirm.client, showSuccess, showError]);
+  }, [deleteConfirm.client]);
 
   const cancelDelete = () => {
     setDeleteConfirm({ open: false, client: null });
   };
 
-  const handleShowOnMap = useCallback(
-    (client: Client) => {
-      const address = client.address.trim();
-      if (address) {
-        const encoded = encodeURIComponent(address);
-        window.open(`https://yandex.ru/maps/?text=${encoded}`, "_blank");
-      } else {
-        showWarning("Адрес не указан");
-      }
-    },
-    [showWarning]
-  );
+  const handleShowOnMap = useCallback((client: Client) => {
+    const address = client.address.trim();
+    if (address) {
+      const encoded = encodeURIComponent(address);
+      window.open(`https://yandex.ru/maps/?text=${encoded}`, "_blank");
+    } else {
+      showNotification("Адрес не указан", "warning");
+    }
+  }, []);
 
-  const handleShowRoute = useCallback(
-    (client: Client) => {
-      const address = client.address.trim();
-      if (address) {
-        const encoded = encodeURIComponent(address);
-        const naviUrl = `yandexnavi://build_route_on_map?&lat=0&lon=0&to=${encoded}`;
-        const mapsUrl = `https://yandex.ru/maps/?rtext=~${encoded}&rtt=auto`;
-        const win = window.open(naviUrl, "_blank");
-        if (!win || win.closed || win.outerHeight === 0) {
-          window.open(mapsUrl, "_blank");
-        }
-      } else {
-        showWarning("Адрес не указан");
+  const handleShowRoute = useCallback((client: Client) => {
+    const address = client.address.trim();
+    if (address) {
+      const encoded = encodeURIComponent(address);
+      const naviUrl = `yandexnavi://build_route_on_map?&lat=0&lon=0&to=${encoded}`;
+      const mapsUrl = `https://yandex.ru/maps/?rtext=~${encoded}&rtt=auto`;
+      const win = window.open(naviUrl, "_blank");
+      if (!win || win.closed || win.outerHeight === 0) {
+        window.open(mapsUrl, "_blank");
       }
-    },
-    [showWarning]
-  );
+    } else {
+      showNotification("Адрес не указан", "warning");
+    }
+  }, []);
 
   return (
     <Box

@@ -37,11 +37,11 @@ export default function PropertyGallery({
 
   const goToNext = useCallback(() => {
     setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
-  }, [photos.length]);
+  }, []);
 
   const goToPrev = useCallback(() => {
     setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
-  }, [photos.length]);
+  }, []);
 
   // Обработка клавиатурной навигации
   useEffect(() => {

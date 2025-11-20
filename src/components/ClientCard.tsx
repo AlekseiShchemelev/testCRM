@@ -29,9 +29,13 @@ export default function ClientCard({
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [galleryPhotos, setGalleryPhotos] = useState<string[]>([]);
 
-  const openPropertyGallery = useCallback((photos: string[]) => {
+  const openPropertyGallery = (photos: string[]) => {
     setGalleryPhotos(photos);
     setIsGalleryOpen(true);
+  };
+
+  const closePropertyGallery = useCallback(() => {
+    setIsGalleryOpen(false);
   }, []);
 
   return (
@@ -261,7 +265,7 @@ export default function ClientCard({
       {/* Галерея фото */}
       <PropertyGallery
         open={isGalleryOpen}
-        onClose={() => setIsGalleryOpen(false)}
+        onClose={closePropertyGallery}
         photos={galleryPhotos}
       />
     </Card>
