@@ -1,5 +1,5 @@
 // src/pages/ClientsPage.tsx
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Box,
   Typography,
@@ -37,7 +37,7 @@ export default function ClientsPage() {
 
   const { showNotification } = useNotifications();
 
-  const loadClients = useCallback(async () => {
+  const loadClients = async () => {
     setLoading(true);
     try {
       const data = await getClients();
@@ -50,11 +50,11 @@ export default function ClientsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     loadClients();
-  }, [loadClients]);
+  }, []);
 
   const filteredClients = clients.filter(
     (client) =>
@@ -74,34 +74,33 @@ export default function ClientsPage() {
     loadClients();
   };
 
-  const handleEditClient = useCallback((client: Client) => {
+  const handleEditClient = (client: Client) => {
     setEditingClient(client);
     setIsAddFormOpen(true);
-  }, []);
+  };
 
-  const handleUpdateClient = useCallback(
-    async (id: string, updatedData: Partial<Client>) => {
-      try {
-        await updateClient(id, updatedData);
-        // Вызываем loadClients напрямую, чтобы избежать проблем с зависимостями
-        const data = await getClients();
-        setClients(data);
-      } catch (error: any) {
-        showNotification(
-          error.message || "Не удалось обновить данные клиента",
-          "error"
-        );
-      }
-    },
-    []
-  );
+  const handleUpdateClient = async (
+    id: string,
+    updatedData: Partial<Client>
+  ) => {
+    try {
+      await updateClient(id, updatedData);
+      const data = await getClients();
+      setClients(data);
+    } catch (error: any) {
+      showNotification(
+        error.message || "Не удалось обновить данные клиента",
+        "error"
+      );
+    }
+  };
 
-  const handleDeleteClient = useCallback((client: Client) => {
+  const handleDeleteClient = (client: Client) => {
     clientToDeleteRef.current = client;
     setDeleteConfirm({ open: true, client });
-  }, []);
+  };
 
-  const confirmDelete = useCallback(async () => {
+  const confirmDelete = async () => {
     const client = clientToDeleteRef.current;
     if (!client) return;
 
@@ -117,13 +116,13 @@ export default function ClientsPage() {
     } finally {
       setDeleting(false);
     }
-  }, []);
+  };
 
   const cancelDelete = () => {
     setDeleteConfirm({ open: false, client: null });
   };
 
-  const handleShowOnMap = useCallback((client: Client) => {
+  const handleShowOnMap = (client: Client) => {
     const address = client.address.trim();
     if (address) {
       const encoded = encodeURIComponent(address);
@@ -131,9 +130,9 @@ export default function ClientsPage() {
     } else {
       showNotification("Адрес не указан", "warning");
     }
-  }, []);
+  };
 
-  const handleShowRoute = useCallback((client: Client) => {
+  const handleShowRoute = (client: Client) => {
     const address = client.address.trim();
     if (address) {
       const encoded = encodeURIComponent(address);
@@ -146,7 +145,7 @@ export default function ClientsPage() {
     } else {
       showNotification("Адрес не указан", "warning");
     }
-  }, []);
+  };
 
   return (
     <Box
