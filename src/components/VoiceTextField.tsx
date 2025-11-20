@@ -84,6 +84,10 @@ const VoiceTextField = memo(function VoiceTextField({
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialized = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const onVoiceInputRef = useRef(onVoiceInput);
+
+  // Обновляем ref при изменении onVoiceInput
+  onVoiceInputRef.current = onVoiceInput;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -105,7 +109,8 @@ const VoiceTextField = memo(function VoiceTextField({
       ) {
         if (isRecording) {
           event.preventDefault();
-          handleVoiceInput();
+          // Вызываем напрямую, так как handleVoiceInput не стабилен
+          stopSpeechRecognition();
         }
       }
 
@@ -113,7 +118,12 @@ const VoiceTextField = memo(function VoiceTextField({
       if ((event.ctrlKey || event.metaKey) && event.key === "m") {
         event.preventDefault();
         if (!isProcessing) {
-          handleVoiceInput();
+          // Вызываем напрямую, так как handleVoiceInput не стабилен
+          setError(null);
+          setIsRecording(true);
+          setIsProcessing(true);
+          setInterimTranscript("");
+          setConfidence(0);
         }
       }
     };
@@ -172,7 +182,7 @@ const VoiceTextField = memo(function VoiceTextField({
           if (isFinal) {
             setInterimTranscript("");
             if (conf >= confidenceThreshold) {
-              onVoiceInput?.(transcript, conf);
+              onVoiceInputRef.current?.(transcript, conf);
             }
           } else {
             setInterimTranscript(transcript);
@@ -209,7 +219,6 @@ const VoiceTextField = memo(function VoiceTextField({
     currentLanguage,
     confidenceThreshold,
     autoRestart,
-    onVoiceInput,
   ]);
 
   // Автоматическое скрытие ошибки
