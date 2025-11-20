@@ -1,6 +1,6 @@
 // src/App.tsx
-import { BrowserRouter, Routes, Route, Suspense } from "react-router-dom";
-import React, { lazy } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React, { lazy, Suspense } from "react";
 import {
   Box,
   Container,
