@@ -1,5 +1,5 @@
 // src/pages/ClientsPage.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -34,11 +34,7 @@ export default function ClientsPage() {
 
   const { showSuccess, showError, showWarning } = useNotifications();
 
-  useEffect(() => {
-    loadClients();
-  }, []);
-
-  const loadClients = async () => {
+  const loadClients = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getClients();
@@ -48,7 +44,11 @@ export default function ClientsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showError]);
+
+  useEffect(() => {
+    loadClients();
+  }, [loadClients]);
 
   const filteredClients = clients.filter(
     (client) =>
@@ -68,28 +68,28 @@ export default function ClientsPage() {
     loadClients();
   };
 
-  const handleEditClient = (client: Client) => {
+  const handleEditClient = useCallback((client: Client) => {
     setEditingClient(client);
     setIsAddFormOpen(true);
-  };
+  }, []);
 
-  const handleUpdateClient = async (
-    id: string,
-    updatedData: Partial<Client>
-  ) => {
-    try {
-      await updateClient(id, updatedData);
-      loadClients();
-    } catch (error: any) {
-      showError(error.message || "Не удалось обновить данные клиента");
-    }
-  };
+  const handleUpdateClient = useCallback(
+    async (id: string, updatedData: Partial<Client>) => {
+      try {
+        await updateClient(id, updatedData);
+        loadClients();
+      } catch (error: any) {
+        showError(error.message || "Не удалось обновить данные клиента");
+      }
+    },
+    [loadClients, showError]
+  );
 
-  const handleDeleteClient = (client: Client) => {
+  const handleDeleteClient = useCallback((client: Client) => {
     setDeleteConfirm({ open: true, client });
-  };
+  }, []);
 
-  const confirmDelete = async () => {
+  const confirmDelete = useCallback(async () => {
     if (!deleteConfirm.client) return;
 
     setDeleting(true);
@@ -105,36 +105,42 @@ export default function ClientsPage() {
     } finally {
       setDeleting(false);
     }
-  };
+  }, [deleteConfirm.client, showSuccess, showError]);
 
   const cancelDelete = () => {
     setDeleteConfirm({ open: false, client: null });
   };
 
-  const handleShowOnMap = (client: Client) => {
-    const address = client.address.trim();
-    if (address) {
-      const encoded = encodeURIComponent(address);
-      window.open(`https://yandex.ru/maps/?text=${encoded}`, "_blank");
-    } else {
-      showWarning("Адрес не указан");
-    }
-  };
-
-  const handleShowRoute = (client: Client) => {
-    const address = client.address.trim();
-    if (address) {
-      const encoded = encodeURIComponent(address);
-      const naviUrl = `yandexnavi://build_route_on_map?&lat=0&lon=0&to=${encoded}`;
-      const mapsUrl = `https://yandex.ru/maps/?rtext=~${encoded}&rtt=auto`;
-      const win = window.open(naviUrl, "_blank");
-      if (!win || win.closed || win.outerHeight === 0) {
-        window.open(mapsUrl, "_blank");
+  const handleShowOnMap = useCallback(
+    (client: Client) => {
+      const address = client.address.trim();
+      if (address) {
+        const encoded = encodeURIComponent(address);
+        window.open(`https://yandex.ru/maps/?text=${encoded}`, "_blank");
+      } else {
+        showWarning("Адрес не указан");
       }
-    } else {
-      showWarning("Адрес не указан");
-    }
-  };
+    },
+    [showWarning]
+  );
+
+  const handleShowRoute = useCallback(
+    (client: Client) => {
+      const address = client.address.trim();
+      if (address) {
+        const encoded = encodeURIComponent(address);
+        const naviUrl = `yandexnavi://build_route_on_map?&lat=0&lon=0&to=${encoded}`;
+        const mapsUrl = `https://yandex.ru/maps/?rtext=~${encoded}&rtt=auto`;
+        const win = window.open(naviUrl, "_blank");
+        if (!win || win.closed || win.outerHeight === 0) {
+          window.open(mapsUrl, "_blank");
+        }
+      } else {
+        showWarning("Адрес не указан");
+      }
+    },
+    [showWarning]
+  );
 
   return (
     <Box

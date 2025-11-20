@@ -112,33 +112,78 @@ export default function AddClientForm({
 
     const newPhotos: string[] = [];
     let processedCount = 0;
+    let errors: string[] = [];
+
+    // Ограничения для фотографий
+    const MAX_PHOTOS = 10; // Максимум 10 фотографий
+    const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 МБ максимум на файл
+    const MAX_TOTAL_SIZE = 8 * 1024 * 1024; // 8 МБ общий размер
+
+    // Проверяем общее количество фотографий
+    if (photos.length + files.length > MAX_PHOTOS) {
+      showError(`Можно загрузить максимум ${MAX_PHOTOS} фотографий`);
+      return;
+    }
 
     Array.from(files).forEach((file) => {
       // Проверяем тип файла (только изображения)
       if (!file.type.startsWith("image/")) {
-        console.warn(
-          `Файл ${file.name} не является изображением и будет пропущен`
+        errors.push(`${file.name} не является изображением`);
+        processedCount++;
+        return;
+      }
+
+      // Проверяем размер файла
+      if (file.size > MAX_FILE_SIZE) {
+        errors.push(
+          `${file.name} превышает максимальный размер ${
+            MAX_FILE_SIZE / 1024 / 1024
+          } МБ`
         );
         processedCount++;
         return;
       }
 
-      // Убираем ограничения по размеру файла - принимаем любые размеры
       const reader = new FileReader();
       reader.onload = () => {
-        newPhotos.push(reader.result as string);
+        const base64String = reader.result as string;
+
+        // Проверяем общий размер с новыми фотографиями
+        const currentTotalSize = photos.reduce(
+          (sum, photo) => sum + photo.length,
+          0
+        );
+        const newPhotoSize = base64String.length;
+
+        if (currentTotalSize + newPhotoSize > MAX_TOTAL_SIZE) {
+          errors.push(
+            `Общий размер фотографий не может превышать ${
+              MAX_TOTAL_SIZE / 1024 / 1024
+            } МБ`
+          );
+          processedCount++;
+          return;
+        }
+
+        newPhotos.push(base64String);
         processedCount++;
 
         // Когда все файлы обработаны, обновляем состояние
         if (processedCount === files.length) {
+          if (errors.length > 0) {
+            showError(errors.join("\n"));
+          }
           setPhotos((prev) => [...prev, ...newPhotos]);
         }
       };
 
       reader.onerror = () => {
-        console.error(`Ошибка при чтении файла ${file.name}`);
+        errors.push(`Ошибка при чтении файла ${file.name}`);
         processedCount++;
         if (processedCount === files.length) {
+          if (errors.length > 0) {
+            showError(errors.join("\n"));
+          }
           setPhotos((prev) => [...prev, ...newPhotos]);
         }
       };
@@ -390,6 +435,21 @@ export default function AddClientForm({
             >
               Фото объекта
             </Typography>
+
+            {/* Информация об ограничениях */}
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: "block", mb: 1, fontSize: "0.75rem" }}
+            >
+              Максимум: 10 фото, 2 МБ на файл, 8 МБ общий размер
+              {photos.length > 0 && (
+                <span style={{ marginLeft: 8 }}>
+                  (Загружено: {photos.length})
+                </span>
+              )}
+            </Typography>
+
             <input
               type="file"
               multiple
@@ -419,6 +479,31 @@ export default function AddClientForm({
                   backgroundColor: "background.default",
                 }}
               >
+                {/* Индикатор использования лимитов */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 1,
+                    px: 0.5,
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary">
+                    Использовано: {photos.length}/10 фото
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Размер:{" "}
+                    {Math.round(
+                      photos.reduce(
+                        (sum, photo) => sum + photo.length * 0.75,
+                        0
+                      ) / 1024
+                    )}{" "}
+                    КБ
+                  </Typography>
+                </Box>
+
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                   {photos.map((photo, index) => (
                     <Box key={index} sx={{ position: "relative" }}>
