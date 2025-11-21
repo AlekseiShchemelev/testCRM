@@ -339,6 +339,7 @@ export default function AddClientForm({
             value={formData.fullName}
             onChange={handleChange}
             required
+            layout="separated"
             onVoiceInput={(text) =>
               setFormData((prev) => ({ ...prev, fullName: text }))
             }
@@ -350,6 +351,7 @@ export default function AddClientForm({
             value={formData.phone}
             onChange={handleChange}
             required
+            layout="separated"
             onVoiceInput={(text) =>
               setFormData((prev) => ({ ...prev, phone: text }))
             }
@@ -361,6 +363,7 @@ export default function AddClientForm({
             value={formData.address}
             onChange={handleChange}
             required
+            layout="separated"
             onVoiceInput={(text) =>
               setFormData((prev) => ({ ...prev, address: text }))
             }
@@ -408,6 +411,7 @@ export default function AddClientForm({
             onChange={handleChange}
             multiline
             minRows={3}
+            layout="separated"
             onVoiceInput={(text) =>
               setFormData((prev) => ({ ...prev, comments: text }))
             }
