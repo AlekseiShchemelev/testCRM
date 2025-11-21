@@ -43,27 +43,41 @@ export default function HistoryPage() {
   };
 
   const handleExportToExcel = () => {
-    const csvContent = [
-      ["Дата", "Действие", "Клиент ID", "Детали"],
-      ...history.map((h) => [
-        new Date(h.timestamp).toLocaleString(),
-        h.action,
-        h.clientId,
-        h.details || "",
-      ]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
+    // Формируем CSV с правильной кодировкой и разделителями
+    const headers = ["Дата и время", "Действие", "ID клиента", "Детали"];
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const csvRows = history.map((h) => [
+      `"${new Date(h.timestamp).toLocaleString("ru-RU")}"`,
+      `"${h.action}"`,
+      `"${h.clientId}"`,
+      `"${(h.details || "").replace(/"/g, '""')}"`, // Экранируем кавычки
+    ]);
+
+    const csvContent = [
+      headers.join(";"), // Используем точку с запятой для Excel
+      ...csvRows.map((row) => row.join(";")),
+    ].join("\n");
+
+    // Добавляем BOM для правильного отображения кириллицы в Excel
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", "history.csv");
+    link.setAttribute(
+      "download",
+      `history_${new Date().toISOString().split("T")[0]}.csv`
+    );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showSuccess("История экспортирована в CSV");
   };
 
   const handleClearAll = () => {
@@ -176,7 +190,7 @@ export default function HistoryPage() {
             Экспорт истории
           </Box>
           <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
-            Экспорт в Excel
+            Экспорт в CSV
           </Box>
         </Button>
         <Button
