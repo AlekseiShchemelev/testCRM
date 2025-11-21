@@ -16,8 +16,6 @@ import {
   Close as CloseIcon,
   AddAPhoto as AddAPhotoIcon,
   Link as LinkIcon,
-  ChevronLeft,
-  ChevronRight,
 } from "@mui/icons-material";
 import { addClient, updateClient } from "../services/clientService";
 import { addHistoryEntry } from "../services/historyService";
@@ -97,6 +95,7 @@ export default function AddClientForm({
         });
         setPhotos([]);
       }
+      setValidationErrors([]);
     }
   }, [open, client]);
 
@@ -278,6 +277,11 @@ export default function AddClientForm({
   };
 
   const title = client ? "Редактировать клиента" : "Добавить нового клиента";
+
+  // ✅ Условный возврат ПОСЛЕ всех хуков
+  if (!open) {
+    return null;
+  }
 
   return (
     <Dialog
