@@ -26,10 +26,10 @@ export const compressImage = (
 ): Promise<CompressionResult> => {
   return new Promise((resolve, reject) => {
     const {
-      maxWidth: 400,
-      maxHeight: 300,
-      quality: 0.6,
-      maxFileSize: 50 * 1024, // 50KB
+      maxWidth = 400,
+      maxHeight = 300,
+      quality = 0.6,
+      maxFileSize = 50 * 1024, // 50KB
       outputFormat = 'jpeg'
     } = options;
 
