@@ -64,23 +64,67 @@ export default function ProfilePage() {
   }, [auth, navigate]);
 
   const handleExportToExcel = () => {
-    // Формируем CSV с разными вариантами для надежности
-    const headers = ["Дата и время", "Действие", "ID клиента", "Детали"];
+    // Получаем всех клиентов для доп. информации
+    const clients = JSON.parse(localStorage.getItem("clients") || "[]");
 
-    const csvRows = history.map((h) => [
-      new Date(h.timestamp).toLocaleString("ru-RU"),
-      h.action,
-      h.clientId,
-      h.details || "",
-    ]);
+    const headers = [
+      "Дата и время",
+      "Действие",
+      "ID клиента",
+      "ФИО клиента",
+      "Телефон",
+      "Адрес",
+      "Дата и время встречи",
+      "Ссылка на объявление",
+      "Детали",
+    ];
 
-    // Вариант 1: UTF-8 с BOM и разделителем табуляции
-    const contentV1 = [
+    const csvRows = history.map((h) => {
+      const client = clients.find((c: any) => c.id === h.clientId);
+
+      // Форматируем действие для читаемости
+      let actionText = "";
+      switch (h.action) {
+        case "created":
+          actionText = "Создан";
+          break;
+        case "updated":
+          actionText = "Изменен";
+          break;
+        case "deleted":
+          actionText = "Удален";
+          break;
+        case "meeting_completed":
+          actionText = "Встреча завершена";
+          break;
+        case "meeting_cancelled":
+          actionText = "Встреча отменена";
+          break;
+        default:
+          actionText = h.action;
+      }
+
+      return [
+        new Date(h.timestamp).toLocaleString("ru-RU"),
+        actionText,
+        h.clientId,
+        client?.fullName || "Неизвестно",
+        client?.phone || "",
+        client?.address || "",
+        client?.meetingDate
+          ? new Date(client.meetingDate).toLocaleString("ru-RU")
+          : "",
+        client?.listingUrl || "",
+        h.details || "",
+      ];
+    });
+
+    const content = [
       headers.join("\t"),
       ...csvRows.map((row) => row.join("\t")),
     ].join("\n");
 
-    const blob = new Blob(["\uFEFF" + contentV1], {
+    const blob = new Blob(["\uFEFF" + content], {
       type: "text/csv; charset=utf-8",
     });
 
@@ -97,13 +141,7 @@ export default function ProfilePage() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    showSuccess(
-      "Файл экспортирован. Если в Excel некорректное отображение, попробуйте открыть через 'Данные' → 'Получить данные' → 'Из текста/CSV'"
-    );
-  };
-
-  const handleClearAll = () => {
-    setClearConfirm(true);
+    showSuccess("История экспортирована с полной информацией о клиентах");
   };
 
   const confirmClearAll = async () => {
