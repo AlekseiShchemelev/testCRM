@@ -28,8 +28,8 @@ export const compressImage = (
     const {
       maxWidth = 400,
       maxHeight = 300,
-      quality = 0.6,
-      maxFileSize = 50 * 1024, // 50KB
+      quality = 0.5,
+      maxFileSize = 40 * 1024, // 50KB
       outputFormat = 'jpeg'
     } = options;
 
