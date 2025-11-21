@@ -64,25 +64,24 @@ export default function ProfilePage() {
   }, [auth, navigate]);
 
   const handleExportToExcel = () => {
-    // Формируем CSV с правильной кодировкой и разделителями
+    // Формируем CSV с разными вариантами для надежности
     const headers = ["Дата и время", "Действие", "ID клиента", "Детали"];
 
     const csvRows = history.map((h) => [
-      `"${new Date(h.timestamp).toLocaleString("ru-RU")}"`,
-      `"${h.action}"`,
-      `"${h.clientId}"`,
-      `"${(h.details || "").replace(/"/g, '""')}"`, // Экранируем кавычки
+      new Date(h.timestamp).toLocaleString("ru-RU"),
+      h.action,
+      h.clientId,
+      h.details || "",
     ]);
 
-    const csvContent = [
-      headers.join(";"), // Используем точку с запятой для Excel
-      ...csvRows.map((row) => row.join(";")),
+    // Вариант 1: UTF-8 с BOM и разделителем табуляции
+    const contentV1 = [
+      headers.join("\t"),
+      ...csvRows.map((row) => row.join("\t")),
     ].join("\n");
 
-    // Добавляем BOM для правильного отображения кириллицы в Excel
-    const BOM = "\uFEFF";
-    const blob = new Blob([BOM + csvContent], {
-      type: "text/csv;charset=utf-8;",
+    const blob = new Blob(["\uFEFF" + contentV1], {
+      type: "text/csv; charset=utf-8",
     });
 
     const link = document.createElement("a");
@@ -92,13 +91,15 @@ export default function ProfilePage() {
       "download",
       `profile_history_${new Date().toISOString().split("T")[0]}.csv`
     );
-    link.style.visibility = "hidden";
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    showSuccess("История экспортирована в CSV");
+    showSuccess(
+      "Файл экспортирован. Если в Excel некорректное отображение, попробуйте открыть через 'Данные' → 'Получить данные' → 'Из текста/CSV'"
+    );
   };
 
   const handleClearAll = () => {
