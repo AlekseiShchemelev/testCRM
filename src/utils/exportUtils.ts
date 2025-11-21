@@ -11,94 +11,105 @@ export const exportHistoryToCSV = (
   filename: string,
   showSuccess?: (message: string) => void
 ) => {
-  // Получаем всех клиентов для дополнительной информации
-  const clients = JSON.parse(localStorage.getItem("clients") || "[]");
+  try {
+    // Получаем всех клиентов для дополнительной информации
+    const clients = JSON.parse(localStorage.getItem("clients") || "[]");
 
-  const headers = [
-    "Дата и время",
-    "Действие",
-    "ID клиента",
-    "ФИО клиента",
-    "Телефон",
-    "Адрес",
-    "Дата и время встречи",
-    "Ссылка на объявление",
-    "Детали",
-  ];
+    const headers = [
+      "Дата и время",
+      "Действие",
+      "ID клиента",
+      "ФИО клиента",
+      "Телефон",
+      "Адрес",
+      "Дата и время встречи",
+      "Ссылка на объявление",
+      "Детали",
+    ];
 
-  const csvRows = history.map((h) => {
-    const client = clients.find((c: any) => c.id === h.clientId);
+    const csvRows = history.map((h) => {
+      const client = clients.find((c: any) => c.id === h.clientId);
 
-    // Форматируем действие для читаемости
-    let actionText = "";
-    switch (h.action) {
-      case "created":
-        actionText = "Создан";
-        break;
-      case "updated":
-        actionText = "Изменен";
-        break;
-      case "deleted":
-        actionText = "Удален";
-        break;
-      case "meeting_completed":
-        actionText = "Встреча завершена";
-        break;
-      case "meeting_cancelled":
-        actionText = "Встреча отменена";
-        break;
-      default:
-        actionText = h.action;
-    }
-
-    // Экранируем данные для CSV
-    const escapeCSV = (field: any) => {
-      if (field === null || field === undefined) return '';
-      const stringField = String(field);
-      // Если поле содержит запятые, кавычки или переносы строк, заключаем в кавычки
-      if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
-        return '"' + stringField.replace(/"/g, '""') + '"';
+      // Форматируем действие для читаемости
+      let actionText = "";
+      switch (h.action) {
+        case "created":
+          actionText = "Создан";
+          break;
+        case "updated":
+          actionText = "Изменен";
+          break;
+        case "deleted":
+          actionText = "Удален";
+          break;
+        case "meeting_completed":
+          actionText = "Встреча завершена";
+          break;
+        case "meeting_cancelled":
+          actionText = "Встреча отменена";
+          break;
+        default:
+          actionText = h.action;
       }
-      return stringField;
-    };
 
-    return [
-      new Date(h.timestamp).toLocaleString("ru-RU"),
-      actionText,
-      h.clientId,
-      client?.fullName || "Неизвестно",
-      client?.phone || "",
-      client?.address || "",
-      client?.meetingDate
-        ? new Date(client.meetingDate).toLocaleString("ru-RU")
-        : "",
-      client?.listingUrl || "",
-      h.details || "",
-    ].map(escapeCSV);
-  });
+      // Экранируем данные для CSV
+      const escapeCSV = (field: any) => {
+        if (field === null || field === undefined) return "";
+        const stringField = String(field);
+        // Если поле содержит запятые, кавычки или переносы строк, заключаем в кавычки
+        if (
+          stringField.includes(",") ||
+          stringField.includes('"') ||
+          stringField.includes("\n")
+        ) {
+          return '"' + stringField.replace(/"/g, '""') + '"';
+        }
+        return stringField;
+      };
 
-  // Используем запятые как разделители и добавляем BOM для корректного отображения кириллицы
-  const content = [
-    headers.join(","),
-    ...csvRows.map((row) => row.join(",")),
-  ].join("\n");
+      return [
+        new Date(h.timestamp).toLocaleString("ru-RU"),
+        actionText,
+        h.clientId,
+        client?.fullName || "Неизвестно",
+        client?.phone || "",
+        client?.address || "",
+        client?.meetingDate
+          ? new Date(client.meetingDate).toLocaleString("ru-RU")
+          : "",
+        client?.listingUrl || "",
+        h.details || "",
+      ].map(escapeCSV);
+    });
 
-  const blob = new Blob(["\uFEFF" + content], {
-    type: "text/csv; charset=utf-8",
-  });
+    // Используем запятые как разделители и добавляем BOM для корректного отображения кириллицы
+    const content = [
+      headers.join(","),
+      ...csvRows.map((row) => row.join(",")),
+    ].join("\n");
 
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-  link.setAttribute("href", url);
-  link.setAttribute("download", filename);
+    const blob = new Blob(["\uFEFF" + content], {
+      type: "text/csv; charset=utf-8",
+    });
 
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
 
-  if (showSuccess) {
-    showSuccess("История экспортирована с полной информацией о клиентах");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    if (showSuccess) {
+      showSuccess(`История экспортирована (${history.length} записей)`);
+    }
+  } catch (error) {
+    console.error("Ошибка при экспорте истории:", error);
+    if (showSuccess) {
+      showSuccess("Произошла ошибка при экспорте истории");
+    }
   }
 };
 
