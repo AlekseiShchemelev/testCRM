@@ -51,6 +51,21 @@ export const exportHistoryToCSV = (
         actionText = h.action;
     }
 
+    // Экранируем данные для CSV
+    const escapeCSV = (field: any) => {
+      if (field === null || field === undefined) return "";
+      const stringField = String(field);
+      // Если поле содержит запятые, кавычки или переносы строк, заключаем в кавычки
+      if (
+        stringField.includes(",") ||
+        stringField.includes('"') ||
+        stringField.includes("\n")
+      ) {
+        return '"' + stringField.replace(/"/g, '""') + '"';
+      }
+      return stringField;
+    };
+
     return [
       new Date(h.timestamp).toLocaleString("ru-RU"),
       actionText,
@@ -63,12 +78,13 @@ export const exportHistoryToCSV = (
         : "",
       client?.listingUrl || "",
       h.details || "",
-    ];
+    ].map(escapeCSV);
   });
 
+  // Используем запятые как разделители и добавляем BOM для корректного отображения кириллицы
   const content = [
-    headers.join("\t"),
-    ...csvRows.map((row) => row.join("\t")),
+    headers.join(","),
+    ...csvRows.map((row) => row.join(",")),
   ].join("\n");
 
   const blob = new Blob(["\uFEFF" + content], {
