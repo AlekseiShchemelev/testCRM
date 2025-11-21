@@ -1,5 +1,5 @@
 // src/pages/ClientsPage.tsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Box,
   Typography,
@@ -32,23 +32,29 @@ export default function ClientsPage() {
   const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const { showSuccess, showError, showWarning } = useNotifications();
+  // Используем ref для хранения клиента для удаления
+  const clientToDeleteRef = useRef<Client | null>(null);
 
-  const loadClients = useCallback(async () => {
+  const { showNotification } = useNotifications();
+
+  const loadClients = async () => {
     setLoading(true);
     try {
       const data = await getClients();
       setClients(data);
     } catch (error: any) {
-      showError(error.message || "Не удалось загрузить список клиентов");
+      showNotification(
+        error.message || "Не удалось загрузить список клиентов",
+        "error"
+      );
     } finally {
       setLoading(false);
     }
-  }, [showError]);
+  };
 
   useEffect(() => {
     loadClients();
-  }, [loadClients]);
+  }, []);
 
   const filteredClients = clients.filter(
     (client) =>
@@ -68,79 +74,78 @@ export default function ClientsPage() {
     loadClients();
   };
 
-  const handleEditClient = useCallback((client: Client) => {
+  const handleEditClient = (client: Client) => {
     setEditingClient(client);
     setIsAddFormOpen(true);
-  }, []);
+  };
 
-  const handleUpdateClient = useCallback(
-    async (id: string, updatedData: Partial<Client>) => {
-      try {
-        await updateClient(id, updatedData);
-        loadClients();
-      } catch (error: any) {
-        showError(error.message || "Не удалось обновить данные клиента");
-      }
-    },
-    [loadClients, showError]
-  );
+  const handleUpdateClient = async (
+    id: string,
+    updatedData: Partial<Client>
+  ) => {
+    try {
+      await updateClient(id, updatedData);
+      const data = await getClients();
+      setClients(data);
+    } catch (error: any) {
+      showNotification(
+        error.message || "Не удалось обновить данные клиента",
+        "error"
+      );
+    }
+  };
 
-  const handleDeleteClient = useCallback((client: Client) => {
+  const handleDeleteClient = (client: Client) => {
+    clientToDeleteRef.current = client;
     setDeleteConfirm({ open: true, client });
-  }, []);
+  };
 
-  const confirmDelete = useCallback(async () => {
-    if (!deleteConfirm.client) return;
+  const confirmDelete = async () => {
+    const client = clientToDeleteRef.current;
+    if (!client) return;
 
     setDeleting(true);
     try {
-      await deleteClient(deleteConfirm.client.id!);
-      setClients((prev) =>
-        prev.filter((c) => c.id !== deleteConfirm.client!.id)
-      );
-      showSuccess(`Клиент "${deleteConfirm.client.fullName}" удален`);
+      await deleteClient(client.id!);
+      setClients((prev) => prev.filter((c) => c.id !== client.id));
+      showNotification(`Клиент "${client.fullName}" удален`, "success");
       setDeleteConfirm({ open: false, client: null });
+      clientToDeleteRef.current = null;
     } catch (error: any) {
-      showError(error.message || "Не удалось удалить клиента");
+      showNotification(error.message || "Не удалось удалить клиента", "error");
     } finally {
       setDeleting(false);
     }
-  }, [deleteConfirm.client, showSuccess, showError]);
+  };
 
   const cancelDelete = () => {
     setDeleteConfirm({ open: false, client: null });
   };
 
-  const handleShowOnMap = useCallback(
-    (client: Client) => {
-      const address = client.address.trim();
-      if (address) {
-        const encoded = encodeURIComponent(address);
-        window.open(`https://yandex.ru/maps/?text=${encoded}`, "_blank");
-      } else {
-        showWarning("Адрес не указан");
-      }
-    },
-    [showWarning]
-  );
+  const handleShowOnMap = (client: Client) => {
+    const address = client.address.trim();
+    if (address) {
+      const encoded = encodeURIComponent(address);
+      window.open(`https://yandex.ru/maps/?text=${encoded}`, "_blank");
+    } else {
+      showNotification("Адрес не указан", "warning");
+    }
+  };
 
-  const handleShowRoute = useCallback(
-    (client: Client) => {
-      const address = client.address.trim();
-      if (address) {
-        const encoded = encodeURIComponent(address);
-        const naviUrl = `yandexnavi://build_route_on_map?&lat=0&lon=0&to=${encoded}`;
-        const mapsUrl = `https://yandex.ru/maps/?rtext=~${encoded}&rtt=auto`;
-        const win = window.open(naviUrl, "_blank");
-        if (!win || win.closed || win.outerHeight === 0) {
-          window.open(mapsUrl, "_blank");
-        }
-      } else {
-        showWarning("Адрес не указан");
+  const handleShowRoute = (client: Client) => {
+    const address = client.address.trim();
+    if (address) {
+      const encoded = encodeURIComponent(address);
+      const naviUrl = `yandexnavi://build_route_on_map?&lat=0&lon=0&to=${encoded}`;
+      const mapsUrl = `https://yandex.ru/maps/?rtext=~${encoded}&rtt=auto`;
+      const win = window.open(naviUrl, "_blank");
+      if (!win || win.closed || win.outerHeight === 0) {
+        window.open(mapsUrl, "_blank");
       }
-    },
-    [showWarning]
-  );
+    } else {
+      showNotification("Адрес не указан", "warning");
+    }
+  };
 
   return (
     <Box

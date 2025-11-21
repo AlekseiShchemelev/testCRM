@@ -11,19 +11,21 @@ import {
   Typography,
   Paper,
   IconButton,
+  LinearProgress,
 } from "@mui/material";
 import {
   Close as CloseIcon,
   AddAPhoto as AddAPhotoIcon,
   Link as LinkIcon,
-  ChevronLeft,
-  ChevronRight,
+  Compress as CompressIcon,
 } from "@mui/icons-material";
 import { addClient, updateClient } from "../services/clientService";
 import { addHistoryEntry } from "../services/historyService";
 import { useNotifications } from "../hooks/useNotifications";
 import type { Client } from "../types";
 import VoiceTextField from "./VoiceTextField";
+import PropertyGallery from "./PropertyGallery";
+import { processImageFiles, type CompressionResult } from "../utils/imageUtils";
 
 interface AddClientFormProps {
   open: boolean;
@@ -66,6 +68,11 @@ export default function AddClientForm({
     null
   );
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [isProcessingImages, setIsProcessingImages] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [compressionInfo, setCompressionInfo] = useState<CompressionResult[]>(
+    []
+  );
 
   const { showSuccess, showError } = useNotifications();
 
@@ -96,6 +103,10 @@ export default function AddClientForm({
         });
         setPhotos([]);
       }
+      setValidationErrors([]);
+      setIsProcessingImages(false);
+      setProcessingProgress(0);
+      setCompressionInfo([]);
     }
   }, [open, client]);
 
@@ -106,90 +117,72 @@ export default function AddClientForm({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    const newPhotos: string[] = [];
-    let processedCount = 0;
-    let errors: string[] = [];
-
-    // Ограничения для фотографий
-    const MAX_PHOTOS = 10; // Максимум 10 фотографий
-    const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 МБ максимум на файл
-    const MAX_TOTAL_SIZE = 8 * 1024 * 1024; // 8 МБ общий размер
-
     // Проверяем общее количество фотографий
+    const MAX_PHOTOS = 10;
     if (photos.length + files.length > MAX_PHOTOS) {
       showError(`Можно загрузить максимум ${MAX_PHOTOS} фотографий`);
       return;
     }
 
-    Array.from(files).forEach((file) => {
-      // Проверяем тип файла (только изображения)
-      if (!file.type.startsWith("image/")) {
-        errors.push(`${file.name} не является изображением`);
-        processedCount++;
-        return;
+    // Настройки сжатия
+    const compressionOptions = {
+      maxWidth: 1920, // Максимальная ширина
+      maxHeight: 1080, // Максимальная высота
+      quality: 0.8, // Качество сжатия (80%)
+      maxFileSize: 800 * 1024, // 800 КБ максимум на файл
+      outputFormat: "jpeg" as const,
+    };
+
+    const validationOptions = {
+      maxFileSize: 5 * 1024 * 1024, // 5 МБ максимум для исходного файла
+      allowedTypes: ["image/jpeg", "image/jpg", "image/png", "image/webp"],
+    };
+
+    setIsProcessingImages(true);
+    setProcessingProgress(0);
+    setCompressionInfo([]);
+
+    try {
+      // Обрабатываем файлы с сжатием
+      const result = await processImageFiles(
+        files,
+        compressionOptions,
+        validationOptions
+      );
+
+      if (result.errors.length > 0) {
+        showError(result.errors.join("\n"));
       }
 
-      // Проверяем размер файла
-      if (file.size > MAX_FILE_SIZE) {
-        errors.push(
-          `${file.name} превышает максимальный размер ${
-            MAX_FILE_SIZE / 1024 / 1024
-          } МБ`
-        );
-        processedCount++;
-        return;
-      }
+      if (result.successful.length > 0) {
+        // Преобразуем dataUrl в обычные строки для совместимости
+        const newPhotos = result.successful.map((result) => result.dataUrl);
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64String = reader.result as string;
+        setPhotos((prev) => [...prev, ...newPhotos]);
+        setCompressionInfo(result.successful);
 
-        // Проверяем общий размер с новыми фотографиями
-        const currentTotalSize = photos.reduce(
-          (sum, photo) => sum + photo.length,
-          0
-        );
-        const newPhotoSize = base64String.length;
-
-        if (currentTotalSize + newPhotoSize > MAX_TOTAL_SIZE) {
-          errors.push(
-            `Общий размер фотографий не может превышать ${
-              MAX_TOTAL_SIZE / 1024 / 1024
-            } МБ`
+        if (result.successful.length > 0) {
+          const totalSavings =
+            result.successful.reduce((sum, r) => sum + r.compressionRatio, 0) /
+            result.successful.length;
+          showSuccess(
+            `Успешно обработано ${
+              result.successful.length
+            } изображений. Средняя экономия: ${totalSavings.toFixed(1)}%`
           );
-          processedCount++;
-          return;
         }
-
-        newPhotos.push(base64String);
-        processedCount++;
-
-        // Когда все файлы обработаны, обновляем состояние
-        if (processedCount === files.length) {
-          if (errors.length > 0) {
-            showError(errors.join("\n"));
-          }
-          setPhotos((prev) => [...prev, ...newPhotos]);
-        }
-      };
-
-      reader.onerror = () => {
-        errors.push(`Ошибка при чтении файла ${file.name}`);
-        processedCount++;
-        if (processedCount === files.length) {
-          if (errors.length > 0) {
-            showError(errors.join("\n"));
-          }
-          setPhotos((prev) => [...prev, ...newPhotos]);
-        }
-      };
-
-      reader.readAsDataURL(file);
-    });
+      }
+    } catch (error: any) {
+      console.error("Ошибка при обработке изображений:", error);
+      showError(`Ошибка при обработке изображений: ${error.message}`);
+    } finally {
+      setIsProcessingImages(false);
+      setProcessingProgress(0);
+    }
   };
 
   const removePhoto = (index: number) => {
@@ -276,21 +269,12 @@ export default function AddClientForm({
     setSelectedPhotoIndex(null);
   };
 
-  const navigatePhoto = (direction: "prev" | "next") => {
-    if (selectedPhotoIndex === null) return;
-
-    if (direction === "prev") {
-      setSelectedPhotoIndex(
-        selectedPhotoIndex > 0 ? selectedPhotoIndex - 1 : photos.length - 1
-      );
-    } else {
-      setSelectedPhotoIndex(
-        selectedPhotoIndex < photos.length - 1 ? selectedPhotoIndex + 1 : 0
-      );
-    }
-  };
-
   const title = client ? "Редактировать клиента" : "Добавить нового клиента";
+
+  // ✅ Условный возврат ПОСЛЕ всех хуков
+  if (!open) {
+    return null;
+  }
 
   return (
     <Dialog
@@ -352,6 +336,7 @@ export default function AddClientForm({
             value={formData.fullName}
             onChange={handleChange}
             required
+            layout="separated"
             onVoiceInput={(text) =>
               setFormData((prev) => ({ ...prev, fullName: text }))
             }
@@ -363,6 +348,7 @@ export default function AddClientForm({
             value={formData.phone}
             onChange={handleChange}
             required
+            layout="separated"
             onVoiceInput={(text) =>
               setFormData((prev) => ({ ...prev, phone: text }))
             }
@@ -374,6 +360,7 @@ export default function AddClientForm({
             value={formData.address}
             onChange={handleChange}
             required
+            layout="separated"
             onVoiceInput={(text) =>
               setFormData((prev) => ({ ...prev, address: text }))
             }
@@ -421,6 +408,7 @@ export default function AddClientForm({
             onChange={handleChange}
             multiline
             minRows={3}
+            layout="separated"
             onVoiceInput={(text) =>
               setFormData((prev) => ({ ...prev, comments: text }))
             }
@@ -442,7 +430,8 @@ export default function AddClientForm({
               color="text.secondary"
               sx={{ display: "block", mb: 1, fontSize: "0.75rem" }}
             >
-              Максимум: 10 фото, 2 МБ на файл, 8 МБ общий размер
+              <strong>Автоматическое сжатие:</strong> максимум 10 фото,
+              1920×1080px, 800 КБ на файл, JPEG качество 80%
               {photos.length > 0 && (
                 <span style={{ marginLeft: 8 }}>
                   (Загружено: {photos.length})
@@ -470,6 +459,79 @@ export default function AddClientForm({
               </Button>
             </label>
 
+            {/* Статистика сжатия изображений */}
+            {compressionInfo.length > 0 && (
+              <Paper
+                sx={{
+                  p: 1.5,
+                  mt: 1.5,
+                  borderRadius: "16px",
+                  backgroundColor: "success.light",
+                  color: "success.contrastText",
+                }}
+              >
+                <Typography variant="subtitle2" gutterBottom fontWeight="bold">
+                  📊 Статистика сжатия изображений:
+                </Typography>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mt: 1 }}>
+                  {compressionInfo.map((info, index) => (
+                    <Box
+                      key={index}
+                      sx={{
+                        minWidth: 120,
+                        textAlign: "center",
+                        backgroundColor: "rgba(255,255,255,0.2)",
+                        p: 1,
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <Typography variant="caption" display="block">
+                        Фото {index + 1}
+                      </Typography>
+                      <Typography variant="body2" fontWeight="bold">
+                        {info.compressionRatio.toFixed(1)}%
+                      </Typography>
+                      <Typography variant="caption">экономии</Typography>
+                    </Box>
+                  ))}
+                </Box>
+                <Typography variant="caption" sx={{ mt: 1, display: "block" }}>
+                  💡 Изображения автоматически сжаты до оптимального качества
+                </Typography>
+              </Paper>
+            )}
+
+            {/* Индикатор обработки изображений */}
+            {isProcessingImages && (
+              <Paper
+                sx={{
+                  p: 1.5,
+                  mt: 1.5,
+                  borderRadius: "16px",
+                  backgroundColor: "info.light",
+                  color: "info.contrastText",
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  <CompressIcon />
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Сжатие изображений...
+                    </Typography>
+                    <LinearProgress
+                      variant="indeterminate"
+                      sx={{
+                        backgroundColor: "rgba(255,255,255,0.3)",
+                        "& .MuiLinearProgress-bar": {
+                          backgroundColor: "white",
+                        },
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Paper>
+            )}
+
             {photos.length > 0 && (
               <Paper
                 sx={{
@@ -494,13 +556,15 @@ export default function AddClientForm({
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     Размер:{" "}
-                    {Math.round(
-                      photos.reduce(
-                        (sum, photo) => sum + photo.length * 0.75,
-                        0
-                      ) / 1024
-                    )}{" "}
-                    КБ
+                    {(() => {
+                      const totalSize = photos.reduce((sum, photo) => {
+                        // Приблизительный расчет размера base64 строки
+                        return sum + Math.round(photo.length * 0.75);
+                      }, 0);
+                      return totalSize < 1024 * 1024
+                        ? `${Math.round(totalSize / 1024)} КБ`
+                        : `${(totalSize / (1024 * 1024)).toFixed(1)} МБ`;
+                    })()}
                   </Typography>
                 </Box>
 
@@ -568,112 +632,13 @@ export default function AddClientForm({
         </Button>
       </DialogActions>
 
-      {/* Полноэкранный просмотр фото */}
-      {selectedPhotoIndex !== null && photos[selectedPhotoIndex] && (
-        <Box
-          sx={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.9)",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-          }}
-          onClick={closePhotoViewer}
-        >
-          <Box
-            sx={{
-              position: "relative",
-              maxWidth: "90vw",
-              maxHeight: "90vh",
-              display: "flex",
-              alignItems: "center",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <img
-              src={photos[selectedPhotoIndex]}
-              alt={`Фото ${selectedPhotoIndex + 1}`}
-              style={{
-                maxWidth: "100%",
-                maxHeight: "100%",
-                objectFit: "contain",
-                borderRadius: "8px",
-              }}
-            />
-
-            {/* Кнопка закрытия */}
-            <IconButton
-              onClick={closePhotoViewer}
-              sx={{
-                position: "absolute",
-                top: -40,
-                right: 0,
-                color: "white",
-                backgroundColor: "rgba(0, 0, 0, 0.5)",
-                "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.7)" },
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
-
-            {/* Кнопки навигации */}
-            {photos.length > 1 && (
-              <>
-                <IconButton
-                  onClick={() => navigatePhoto("prev")}
-                  sx={{
-                    position: "absolute",
-                    left: -50,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "white",
-                    backgroundColor: "rgba(0, 0, 0, 0.5)",
-                    "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.7)" },
-                  }}
-                >
-                  <ChevronLeft fontSize="large" />
-                </IconButton>
-                <IconButton
-                  onClick={() => navigatePhoto("next")}
-                  sx={{
-                    position: "absolute",
-                    right: -50,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "white",
-                    backgroundColor: "rgba(0, 0, 0, 0.5)",
-                    "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.7)" },
-                  }}
-                >
-                  <ChevronRight fontSize="large" />
-                </IconButton>
-              </>
-            )}
-
-            {/* Счетчик фото */}
-            {photos.length > 1 && (
-              <Typography
-                sx={{
-                  position: "absolute",
-                  bottom: -40,
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  color: "white",
-                  fontSize: "0.9rem",
-                }}
-              >
-                {selectedPhotoIndex + 1} из {photos.length}
-              </Typography>
-            )}
-          </Box>
-        </Box>
-      )}
+      {/* Галерея фотографий */}
+      <PropertyGallery
+        open={selectedPhotoIndex !== null}
+        onClose={closePhotoViewer}
+        photos={photos}
+        initialIndex={selectedPhotoIndex ?? 0}
+      />
     </Dialog>
   );
 }

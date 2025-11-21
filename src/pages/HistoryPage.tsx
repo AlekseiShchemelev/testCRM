@@ -4,13 +4,12 @@ import {
   Box,
   Typography,
   Paper,
-  IconButton,
+  CircularProgress,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
 import {
   Download,
-  Delete as DeleteIcon,
   History as HistoryIcon,
   Clear as ClearIcon,
 } from "@mui/icons-material";
@@ -18,11 +17,16 @@ import type { HistoryEntry } from "../types";
 import { getHistory, clearHistory } from "../services/historyService";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useNotifications } from "../hooks/useNotifications";
+import {
+  exportHistoryToCSV,
+  createFilenameWithDate,
+} from "../utils/exportUtils";
 
 export default function HistoryPage() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [clearConfirm, setClearConfirm] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const { showSuccess, showError } = useNotifications();
   const theme = useTheme();
@@ -42,28 +46,17 @@ export default function HistoryPage() {
     }
   };
 
-  const handleExportToExcel = () => {
-    const csvContent = [
-      ["Дата", "Действие", "Клиент ID", "Детали"],
-      ...history.map((h) => [
-        new Date(h.timestamp).toLocaleString(),
-        h.action,
-        h.clientId,
-        h.details || "",
-      ]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", "history.csv");
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleExportToExcel = async () => {
+    setExporting(true);
+    try {
+      const filename = createFilenameWithDate("history");
+      await exportHistoryToCSV(history, filename, showSuccess);
+    } catch (error) {
+      console.error("Ошибка экспорта:", error);
+      showError("Не удалось экспортировать историю");
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleClearAll = () => {
@@ -155,8 +148,9 @@ export default function HistoryPage() {
       >
         <Button
           variant="outlined"
-          startIcon={<Download />}
+          startIcon={exporting ? <CircularProgress size={20} /> : <Download />}
           onClick={handleExportToExcel}
+          disabled={exporting || history.length === 0}
           sx={{
             minWidth: { xs: "100%", sm: "auto" },
             height: { xs: 48, sm: 56 },
@@ -170,19 +164,23 @@ export default function HistoryPage() {
               backgroundColor: "primary.lighter",
               borderColor: "primary.dark",
             },
+            "&:disabled": {
+              borderColor: "action.disabled",
+              color: "action.disabled",
+            },
           }}
         >
           <Box component="span" sx={{ display: { xs: "inline", sm: "none" } }}>
-            Экспорт истории
+            {exporting ? "Экспорт..." : "Экспорт истории"}
           </Box>
           <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
-            Экспорт в Excel
+            {exporting ? "Экспорт..." : "Экспорт в CSV"}
           </Box>
         </Button>
         <Button
           variant="contained"
           color="error"
-          startIcon={<ClearIcon />}
+          startIcon={clearing ? <CircularProgress size={20} /> : <ClearIcon />}
           onClick={handleClearAll}
           disabled={history.length === 0 || clearing}
           sx={{

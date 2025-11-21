@@ -19,29 +19,30 @@ interface PropertyGalleryProps {
   open: boolean;
   onClose: () => void;
   photos: string[];
+  initialIndex?: number | null;
 }
 
 export default function PropertyGallery({
   open,
   onClose,
   photos,
+  initialIndex = 0,
 }: PropertyGalleryProps) {
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(
+    Math.max(0, Math.min(initialIndex || 0, (photos?.length || 1) - 1))
+  );
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  // Проверяем наличие фотографий
-  if (!photos.length) {
-    return null;
-  }
-
   const goToNext = useCallback(() => {
+    if (!photos?.length) return;
     setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
-  }, []);
+  }, [photos?.length]);
 
   const goToPrev = useCallback(() => {
+    if (!photos?.length) return;
     setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
-  }, []);
+  }, [photos?.length]);
 
   // Обработка клавиатурной навигации
   useEffect(() => {
@@ -75,12 +76,23 @@ export default function PropertyGallery({
 
   // Сброс индекса при смене фотографий
   useEffect(() => {
-    if (currentPhotoIndex >= photos.length) {
+    if (photos?.length && currentPhotoIndex >= photos.length) {
       setCurrentPhotoIndex(0);
     }
-  }, [photos.length, currentPhotoIndex]);
+  }, [photos?.length, currentPhotoIndex]);
 
-  if (!open) return null;
+  // Обновление индекса при изменении initialIndex
+  useEffect(() => {
+    if (initialIndex !== undefined && initialIndex !== null && photos?.length) {
+      const safeIndex = Math.max(0, Math.min(initialIndex, photos.length - 1));
+      setCurrentPhotoIndex(safeIndex);
+    }
+  }, [initialIndex, photos?.length]);
+
+  // ✅ Условный возврат ПОСЛЕ всех хуков
+  if (!open || !photos?.length || photos.length === 0) {
+    return null;
+  }
 
   return (
     <Dialog
@@ -174,7 +186,7 @@ export default function PropertyGallery({
         {/* Основное изображение */}
         <Box
           component="img"
-          src={photos[currentPhotoIndex]}
+          src={photos?.[currentPhotoIndex] || ""}
           alt={`Фото ${currentPhotoIndex + 1}`}
           sx={{
             maxWidth: isMobile ? "95vw" : "90vw",

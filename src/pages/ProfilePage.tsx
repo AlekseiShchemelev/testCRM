@@ -4,10 +4,6 @@ import {
   Box,
   Typography,
   Paper,
-  List,
-  ListItem,
-  ListItemText,
-  Divider,
   Button,
   Alert,
   CircularProgress,
@@ -29,6 +25,10 @@ import { clearAllData } from "../services/dataService";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useNotifications } from "../hooks/useNotifications";
 import type { HistoryEntry } from "../types";
+import {
+  exportHistoryToCSV,
+  createFilenameWithDate,
+} from "../utils/exportUtils";
 
 export default function ProfilePage() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -45,6 +45,23 @@ export default function ProfilePage() {
 
   const auth = getAuth();
   const navigate = useNavigate();
+
+  const loadClients = () => {
+    try {
+      const clientsData = localStorage.getItem("clients");
+      const customersData = localStorage.getItem("customers");
+
+      if (clientsData) {
+        const parsedClients = JSON.parse(clientsData);
+        console.log("Загружены клиенты в профиле:", parsedClients);
+      } else if (customersData) {
+        const parsedCustomers = JSON.parse(customersData);
+        console.log("Загружены customers в профиле:", parsedCustomers);
+      }
+    } catch (error) {
+      console.error("Ошибка загрузки клиентов в профиле:", error);
+    }
+  };
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -65,30 +82,17 @@ export default function ProfilePage() {
       }
     };
     loadHistory();
+    loadClients();
   }, [auth, navigate]);
 
-  const handleExportToExcel = () => {
-    const csvContent = [
-      ["Дата", "Действие", "Клиент ID", "Детали"],
-      ...history.map((h) => [
-        new Date(h.timestamp).toLocaleString(),
-        h.action,
-        h.clientId,
-        h.details || "",
-      ]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", "history.csv");
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleExportToExcel = async () => {
+    try {
+      const filename = createFilenameWithDate("profile_history");
+      await exportHistoryToCSV(history, filename, showSuccess);
+    } catch (error) {
+      console.error("Ошибка экспорта:", error);
+      showError("Не удалось экспортировать историю");
+    }
   };
 
   const handleClearAll = () => {
@@ -225,7 +229,7 @@ export default function ProfilePage() {
             Экспорт данных
           </Box>
           <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
-            Экспорт
+            Экспорт в CSV
           </Box>
         </Button>
         <Button

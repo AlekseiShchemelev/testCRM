@@ -1,4 +1,18 @@
-// src/components/ClientCard.tsx
+// src/components/ClientCard.tsx - Карточка клиента
+/**
+ * Этот компонент отображает информацию о клиенте в виде карточки.
+ * Демонстрирует множество современных подходов к React разработке:
+ *
+ * Архитектурные особенности:
+ * - Presentational компонент (только отображение, без бизнес-логики)
+ * - Props-driven подход (все данные приходят извне)
+ * - Responsive дизайн с адаптацией под разные экраны
+ * - Material UI для консистентного дизайна
+ * - Hover эффекты и микроанимации
+ * - Conditional rendering для опциональных данных
+ * - Lazy loading для галереи изображений
+ */
+
 import { useState, useCallback } from "react";
 import { Card, CardMedia, Typography, Box } from "@mui/material";
 import ActionMenu from "./ActionMenu";
@@ -7,16 +21,39 @@ import type { Client } from "../types";
 import { Link as LinkIcon } from "@mui/icons-material";
 import { Button } from "@mui/material";
 
+/**
+ * Интерфейс props для компонента ClientCard
+ *
+ * Все методы передаются как callbacks от родительского компонента
+ * Это обеспечивает separation of concerns и переиспользуемость
+ */
 interface ClientCardProps {
+  /** Объект клиента с полной информацией */
   client: Client;
+  /** Callback для редактирования клиента */
   onEdit: () => void;
+  /** Callback для удаления клиента */
   onDelete: () => void;
+  /** Callback для отметки встречи как завершенной */
   onMarkCompleted: () => void;
+  /** Callback для отмены встречи */
   onMarkCancelled: () => void;
+  /** Callback для показа на карте */
   onShowOnMap: () => void;
+  /** Callback для построения маршрута */
   onShowRoute: () => void;
 }
 
+/**
+ * Основная функция компонента ClientCard
+ *
+ * Структура компонента:
+ * 1. Card (главный контейнер)
+ * 2. CardMedia (миниатюра фото объекта)
+ * 3. Box (основная информация)
+ * 4. ActionMenu (меню действий)
+ * 5. PropertyGallery (галерея фото)
+ */
 export default function ClientCard({
   client,
   onEdit,
@@ -26,19 +63,41 @@ export default function ClientCard({
   onShowOnMap,
   onShowRoute,
 }: ClientCardProps) {
+  // Локальное состояние для управления галереей фото
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [galleryPhotos, setGalleryPhotos] = useState<string[]>([]);
 
+  /**
+   * Открывает галерею с переданными фотографиями
+   *
+   * @param {string[]} photos - Массив URL фотографий
+   */
   const openPropertyGallery = (photos: string[]) => {
     setGalleryPhotos(photos);
     setIsGalleryOpen(true);
   };
 
+  /**
+   * Закрывает галерею фотографий
+   * Использует useCallback для мемоизации функции
+   */
   const closePropertyGallery = useCallback(() => {
     setIsGalleryOpen(false);
   }, []);
 
   return (
+    /**
+     * Card - основной контейнер Material UI
+     *
+     * Responsive поведение:
+     * - xs: column (вертикальная компоновка на мобильных)
+     * - sm: row (горизонтальная компоновка на больших экранах)
+     *
+     * Hover эффекты:
+     * - Увеличение elevation (тени)
+     * - Изменение цвета границы
+     * - Легкий подъем карточки вверх
+     */
     <Card
       elevation={1}
       sx={{
@@ -59,7 +118,15 @@ export default function ClientCard({
         gap: { xs: 1, sm: 0 },
       }}
     >
-      {/* Миниатюра */}
+      {/*
+       * Секция с миниатюрой фотографии объекта
+       *
+       * Особенности:
+       * - Responsive размеры для разных экранов
+       * - Fallback изображение (base64 SVG) если нет фото
+       * - Индикатор количества фото если их больше одного
+       * - Hover эффект с увеличением при наличии фото
+       */}
       <Box
         sx={{
           position: "relative",
@@ -82,7 +149,10 @@ export default function ClientCard({
               ? { transform: "scale(1.05)" }
               : {},
           }}
-          image={client.propertyPhotos?.[0] || "/default-avatar.png"}
+          image={
+            client.propertyPhotos?.[0] ||
+            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHZpZXdCb3g9IjAgMCA3MCA3MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzUiIGN5PSIzNSIgcj0iMzUiIGZpbGw9IiNGM0Y0RjYiLz4KPHN2ZyB4PSIyMCIgeT0iMjAiIHdpZHRoPSIzMCIgaGVpZ2h0PSIzMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiI+CjxwYXRoIGQ9Ik0yMSAxMWMtMS42MTYgMC0zIDEuMzg0LTMgM3MzIDEuMzg0IDMgMyAzdjJjMCAxLjYxNi0xLjM4NCAzLTMgM0MtNS4zODYgMjEuNSA0IDE5LjEwNCA0IDE3VjE0YzAtMS42MTYgMS4zODQtMyAzLTN6bTAgMmMtMi4yMDcgMC00IDEuNzkzLTQgNEMxNyAxNC43OTcgMTguMjA3IDEzIDE5IDEzYzEuNzkzIDAgMyAxLjc5MyAzIDRjMCAyLjIwNy0xLjIwNyA0LTQgNHptMCA0Yy0zLjMyNCAwLTEwIDEuNjc2LTEwIDZWNWMwIDQuMzI0IDYuNjc2IDYgMTAgNnMxMC0xLjY3NiAxMC02VjE5YzAtNC4zMjQtNi42NzYtNi0xMC02eiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4KPC9zdmc+"
+          }
           alt="Фото объекта"
           onClick={() => {
             if (client.propertyPhotos?.length) {
@@ -91,6 +161,12 @@ export default function ClientCard({
           }}
           title="Нажмите для просмотра фото"
         />
+
+        {/*
+         * Индикатор количества фотографий
+         * Отображается только если фото больше одного
+         * Позиционируется в правом нижнем углу миниатюры
+         */}
         {client.propertyPhotos && client.propertyPhotos.length > 1 && (
           <Box
             sx={{
@@ -110,7 +186,7 @@ export default function ClientCard({
               border: "2px solid white",
             }}
             onClick={(e) => {
-              e.stopPropagation();
+              e.stopPropagation(); // Предотвращаем всплытие события
               openPropertyGallery(client.propertyPhotos!);
             }}
           >
@@ -119,7 +195,12 @@ export default function ClientCard({
         )}
       </Box>
 
-      {/* Основная информация */}
+      {/*
+       * Основная информация о клиенте
+       *
+       * Использует flex для вертикального расположения элементов
+       * minWidth: 0 важно для правильного переноса длинного текста
+       */}
       <Box
         sx={{
           flex: 1,
@@ -129,6 +210,7 @@ export default function ClientCard({
           gap: 0.5,
         }}
       >
+        {/* ФИО клиента */}
         <Typography
           variant="h6"
           sx={{
@@ -141,6 +223,7 @@ export default function ClientCard({
           {client.fullName}
         </Typography>
 
+        {/* Контактная информация */}
         <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
           <Typography
             variant="body2"
@@ -161,7 +244,14 @@ export default function ClientCard({
           </Typography>
         </Box>
 
-        {/* Комментарии */}
+        {/*
+         * Комментарии (опциональное поле)
+         *
+         * Особенности отображения:
+         * - Обрезание текста до 2 строк с многоточием
+         * - Поддержка переноса строк
+         * - Курсивное начертание для визуального выделения
+         */}
         {client.comments && (
           <Typography
             variant="body2"
@@ -183,7 +273,14 @@ export default function ClientCard({
           </Typography>
         )}
 
-        {/* Ссылка на объявление */}
+        {/*
+         * Ссылка на объявление (опциональное поле)
+         *
+         * Особенности:
+         * - Отображается только если URL указан
+         * - Открывается в новой вкладке
+         * - Responsive размеры кнопки
+         */}
         {client.listingUrl && (
           <Box sx={{ mt: 0.5 }}>
             <Button
@@ -214,7 +311,16 @@ export default function ClientCard({
           </Box>
         )}
 
-        {/* Дата встречи */}
+        {/*
+         * Дата и время встречи
+         *
+         * Форматирование даты:
+         * - День, месяц (сокращенно), год
+         * - Время в формате ЧЧ:ММ
+         * - Используется локаль "ru-RU" для русского формата
+         *
+         * mt: "auto" прижимает дату к низу контейнера
+         */}
         <Typography
           variant="body2"
           color="text.secondary"
@@ -238,7 +344,13 @@ export default function ClientCard({
         </Typography>
       </Box>
 
-      {/* Действия */}
+      {/*
+       * Меню действий
+       *
+       * Responsive поведение:
+       * - xs: полноразмерное меню с разделением (на мобильных)
+       * - sm: компактное меню в центре (на больших экранах)
+       */}
       <Box
         sx={{
           display: "flex",
@@ -262,7 +374,12 @@ export default function ClientCard({
         />
       </Box>
 
-      {/* Галерея фото */}
+      {/*
+       * Галерея фотографий объекта
+       *
+       * Модальное окно с полноэкранным просмотром фотографий
+       * Открывается при клике на миниатюру или индикатор количества
+       */}
       <PropertyGallery
         open={isGalleryOpen}
         onClose={closePropertyGallery}

@@ -1,5 +1,5 @@
 // src/components/VoiceTextField.tsx
-import { useState, useCallback, useRef, useEffect, memo } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   TextField,
   Box,
@@ -50,9 +50,11 @@ interface VoiceTextFieldProps {
   showConfidence?: boolean;
   autoRestart?: boolean;
   placeholder?: string;
+  layout?: "inline" | "separated";
+  autoStop?: boolean; // Автоматическое отключение микрофона после ввода
 }
 
-const VoiceTextField = memo(function VoiceTextField({
+export default function VoiceTextField({
   label,
   name,
   value,
@@ -68,6 +70,8 @@ const VoiceTextField = memo(function VoiceTextField({
   showConfidence = false,
   autoRestart = false,
   placeholder,
+  layout = "inline",
+  autoStop = true,
 }: VoiceTextFieldProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -80,12 +84,19 @@ const VoiceTextField = memo(function VoiceTextField({
     useState<SupportedLanguage>(language);
   const [confidence, setConfidence] = useState(0);
   const [isSupported, setIsSupported] = useState(true);
+  const [autoStopped, setAutoStopped] = useState(false);
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialized = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const onVoiceInputRef = useRef(onVoiceInput);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  // Обновляем ref при изменении onVoiceInput
+  useEffect(() => {
+    onVoiceInputRef.current = onVoiceInput;
+  }, [onVoiceInput]);
 
   // Проверка поддержки Speech Recognition
   useEffect(() => {
@@ -105,7 +116,8 @@ const VoiceTextField = memo(function VoiceTextField({
       ) {
         if (isRecording) {
           event.preventDefault();
-          handleVoiceInput();
+          // Вызываем напрямую, так как handleVoiceInput не стабилен
+          stopSpeechRecognition();
         }
       }
 
@@ -113,7 +125,12 @@ const VoiceTextField = memo(function VoiceTextField({
       if ((event.ctrlKey || event.metaKey) && event.key === "m") {
         event.preventDefault();
         if (!isProcessing) {
-          handleVoiceInput();
+          // Вызываем напрямую, так как handleVoiceInput не стабилен
+          setError(null);
+          setIsRecording(true);
+          setIsProcessing(true);
+          setInterimTranscript("");
+          setConfidence(0);
         }
       }
     };
@@ -132,7 +149,7 @@ const VoiceTextField = memo(function VoiceTextField({
   }, []);
 
   // Обработка голосового ввода
-  const handleVoiceInput = useCallback(async () => {
+  const handleVoiceInput = async () => {
     if (!isSupported) {
       setError(
         "Голосовой ввод не поддерживается в этом браузере. Используйте Chrome или Edge."
@@ -172,7 +189,14 @@ const VoiceTextField = memo(function VoiceTextField({
           if (isFinal) {
             setInterimTranscript("");
             if (conf >= confidenceThreshold) {
-              onVoiceInput?.(transcript, conf);
+              onVoiceInputRef.current?.(transcript, conf);
+              // Автоматическое отключение микрофона после успешного ввода
+              if (autoStop) {
+                setAutoStopped(true);
+                setTimeout(() => {
+                  stopSpeechRecognition();
+                }, 500); // Небольшая задержка для плавности
+              }
             }
           } else {
             setInterimTranscript(transcript);
@@ -202,15 +226,7 @@ const VoiceTextField = memo(function VoiceTextField({
       setIsProcessing(false);
       setInterimTranscript("");
     }
-  }, [
-    isSupported,
-    isRecording,
-    isProcessing,
-    currentLanguage,
-    confidenceThreshold,
-    autoRestart,
-    onVoiceInput,
-  ]);
+  };
 
   // Автоматическое скрытие ошибки
   useEffect(() => {
@@ -227,11 +243,21 @@ const VoiceTextField = memo(function VoiceTextField({
     };
   }, [error]);
 
+  // Автоматическое скрытие уведомления об автоостановке
+  useEffect(() => {
+    if (autoStopped) {
+      const timeout = setTimeout(() => {
+        setAutoStopped(false);
+      }, 2000);
+      return () => clearTimeout(timeout);
+    }
+  }, [autoStopped]);
+
   // Обработка изменения языка
-  const handleLanguageChange = useCallback((newLanguage: SupportedLanguage) => {
+  const handleLanguageChange = (newLanguage: SupportedLanguage) => {
     setCurrentLanguage(newLanguage);
     setSettingsAnchor(null);
-  }, []);
+  };
 
   // Получение статуса распознавания
   const recognitionStatus = getRecognitionStatus();
@@ -262,8 +288,265 @@ const VoiceTextField = memo(function VoiceTextField({
   const displayValue = interimTranscript || value;
   const showInterim = interimTranscript && isRecording;
 
+  // Inline layout (текущий)
+  if (layout === "inline") {
+    return (
+      <Box sx={{ position: "relative", width: "100%" }}>
+        <TextField
+          ref={inputRef}
+          label={label}
+          name={name}
+          value={displayValue}
+          onChange={onChange}
+          fullWidth
+          required={required}
+          size={isMobile ? "medium" : "small"}
+          multiline={multiline}
+          minRows={minRows}
+          type={type}
+          placeholder={
+            placeholder || (showInterim ? "Говорите..." : placeholder)
+          }
+          InputLabelProps={type === "datetime-local" ? { shrink: true } : {}}
+          sx={{
+            "& .MuiInputBase-root": {
+              borderRadius: "12px",
+              pr: enableSettings || isSupported ? 10 : 3,
+            },
+            "& .MuiInputBase-input": {
+              "&::placeholder": {
+                color: showInterim ? "primary.main" : "text.secondary",
+                opacity: showInterim ? 1 : 0.6,
+              },
+            },
+          }}
+          InputProps={{
+            endAdornment: (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                {/* Кнопка настроек */}
+                {enableSettings && (
+                  <Tooltip title="Настройки голосового ввода (Ctrl+M для активации)">
+                    <IconButton
+                      size={isMobile ? "medium" : "small"}
+                      onClick={(e) => setSettingsAnchor(e.currentTarget)}
+                      sx={{
+                        color: "text.secondary",
+                        "&:hover": { color: "primary.main" },
+                      }}
+                    >
+                      <SettingsIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+
+                {/* Кнопка микрофона */}
+                <Tooltip
+                  title={
+                    isRecording
+                      ? "Остановить запись (Esc)"
+                      : "Начать запись (Ctrl+M)"
+                  }
+                >
+                  <IconButton
+                    size={isMobile ? "medium" : "small"}
+                    onClick={handleVoiceInput}
+                    disabled={isProcessing}
+                    sx={{
+                      color: isRecording ? "error.main" : "primary.main",
+                      backgroundColor: isRecording
+                        ? "error.lighter"
+                        : "transparent",
+                      "&:hover": {
+                        backgroundColor: isRecording
+                          ? "error.light"
+                          : "action.hover",
+                      },
+                      "&:disabled": {
+                        color: "action.disabled",
+                      },
+                      transition: "all 0.2s ease-in-out",
+                    }}
+                  >
+                    {isProcessing ? (
+                      <CircularProgress
+                        size={isMobile ? 20 : 16}
+                        color="inherit"
+                      />
+                    ) : isRecording ? (
+                      <StopIcon fontSize="small" />
+                    ) : (
+                      <MicIcon fontSize="small" />
+                    )}
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            ),
+          }}
+        />
+
+        {/* Статус записи */}
+        {isRecording && (
+          <Box
+            sx={{
+              position: "absolute",
+              top: isMobile ? -40 : -32,
+              right: 0,
+              backgroundColor: "error.main",
+              color: "white",
+              px: isMobile ? 2 : 1.5,
+              py: isMobile ? 0.75 : 0.5,
+              borderRadius: isMobile ? "12px" : "8px",
+              fontSize: isMobile ? "0.8rem" : "0.75rem",
+              display: "flex",
+              alignItems: "center",
+              gap: 0.5,
+              zIndex: 1000,
+              animation: "pulse 1.5s infinite",
+              boxShadow: "0 4px 12px rgba(244, 67, 54, 0.3)",
+              "@keyframes pulse": {
+                "0%": { opacity: 1, transform: "scale(1)" },
+                "50%": { opacity: 0.8, transform: "scale(1.02)" },
+                "100%": { opacity: 1, transform: "scale(1)" },
+              },
+            }}
+          >
+            <MicIcon sx={{ fontSize: isMobile ? "1rem" : "0.9rem" }} />
+            <Box component="span">
+              {isProcessing ? "Обработка..." : "Говорите..."}
+              {showConfidence && confidence > 0 && (
+                <Box component="span" sx={{ ml: 1, opacity: 0.8 }}>
+                  ({Math.round(confidence * 100)}%)
+                </Box>
+              )}
+            </Box>
+          </Box>
+        )}
+
+        {/* Уведомление об автоматической остановке */}
+        {autoStopped && (
+          <Box
+            sx={{
+              mt: 1,
+              p: 1,
+              borderRadius: "8px",
+              backgroundColor: "success.light",
+              color: "success.contrastText",
+              fontSize: "0.8rem",
+              display: "flex",
+              alignItems: "center",
+              gap: 0.5,
+              animation: "fadeInOut 2s ease-in-out",
+              "@keyframes fadeInOut": {
+                "0%": { opacity: 0, transform: "translateY(-10px)" },
+                "20%": { opacity: 1, transform: "translateY(0)" },
+                "80%": { opacity: 1, transform: "translateY(0)" },
+                "100%": { opacity: 0, transform: "translateY(-10px)" },
+              },
+            }}
+          >
+            <MicOffIcon sx={{ fontSize: "1rem" }} />
+            <Box component="span">Микрофон автоматически отключен</Box>
+          </Box>
+        )}
+
+        {/* Ошибки */}
+        {error && (
+          <Alert
+            severity="error"
+            sx={{
+              mt: 1,
+              borderRadius: "8px",
+              "& .MuiAlert-message": {
+                width: "100%",
+              },
+            }}
+            onClose={() => setError(null)}
+          >
+            {error}
+          </Alert>
+        )}
+
+        {/* Подсказка по горячим клавишам */}
+        {isSupported && !isRecording && (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{
+              mt: 0.5,
+              display: "block",
+              fontSize: "0.7rem",
+              opacity: 0.7,
+            }}
+          >
+            Подсказка: используйте Ctrl+M для быстрой активации микрофона
+          </Typography>
+        )}
+
+        {/* Поповер с настройками */}
+        <Popover
+          open={Boolean(settingsAnchor)}
+          anchorEl={settingsAnchor}
+          onClose={() => setSettingsAnchor(null)}
+          anchorOrigin={{
+            vertical: "bottom",
+            horizontal: "right",
+          }}
+          transformOrigin={{
+            vertical: "top",
+            horizontal: "right",
+          }}
+          PaperProps={{
+            sx: {
+              mt: 1,
+              p: 2,
+              minWidth: 280,
+              borderRadius: "12px",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+            },
+          }}
+        >
+          <Typography variant="h6" gutterBottom sx={{ fontSize: "1rem" }}>
+            Настройки голосового ввода
+          </Typography>
+
+          <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+            <InputLabel>Язык</InputLabel>
+            <Select
+              value={currentLanguage}
+              label="Язык"
+              onChange={(e) =>
+                handleLanguageChange(e.target.value as SupportedLanguage)
+              }
+            >
+              {Object.entries(getSupportedLanguages()).map(([code, name]) => (
+                <MenuItem key={code} value={code}>
+                  {name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <Box sx={{ fontSize: "0.8rem", color: "text.secondary" }}>
+            <Typography variant="body2" gutterBottom>
+              Статус: {recognitionStatus.isActive ? "Активен" : "Неактивен"}
+            </Typography>
+            <Typography variant="body2">
+              Текущий язык:{" "}
+              {getSupportedLanguages()[currentLanguage] || currentLanguage}
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 1, fontStyle: "italic" }}>
+              Горячие клавиши: Ctrl+M для активации, Esc для остановки
+            </Typography>
+          </Box>
+        </Popover>
+      </Box>
+    );
+  }
+
+  // Separated layout (новый)
   return (
-    <Box sx={{ position: "relative", width: "100%" }}>
+    <Box sx={{ width: "100%" }}>
+      {/* Поле ввода без кнопок */}
       <TextField
         ref={inputRef}
         label={label}
@@ -281,7 +564,6 @@ const VoiceTextField = memo(function VoiceTextField({
         sx={{
           "& .MuiInputBase-root": {
             borderRadius: "12px",
-            pr: enableSettings || isSupported ? 10 : 3,
           },
           "& .MuiInputBase-input": {
             "&::placeholder": {
@@ -290,105 +572,122 @@ const VoiceTextField = memo(function VoiceTextField({
             },
           },
         }}
-        InputProps={{
-          endAdornment: (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-              {/* Кнопка настроек */}
-              {enableSettings && (
-                <Tooltip title="Настройки голосового ввода (Ctrl+M для активации)">
-                  <IconButton
-                    size={isMobile ? "medium" : "small"}
-                    onClick={(e) => setSettingsAnchor(e.currentTarget)}
-                    sx={{
-                      color: "text.secondary",
-                      "&:hover": { color: "primary.main" },
-                    }}
-                  >
-                    <SettingsIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
-
-              {/* Кнопка микрофона */}
-              <Tooltip
-                title={
-                  isRecording
-                    ? "Остановить запись (Esc)"
-                    : "Начать запись (Ctrl+M)"
-                }
-              >
-                <IconButton
-                  size={isMobile ? "medium" : "small"}
-                  onClick={handleVoiceInput}
-                  disabled={isProcessing}
-                  sx={{
-                    color: isRecording ? "error.main" : "primary.main",
-                    backgroundColor: isRecording
-                      ? "error.lighter"
-                      : "transparent",
-                    "&:hover": {
-                      backgroundColor: isRecording
-                        ? "error.light"
-                        : "action.hover",
-                    },
-                    "&:disabled": {
-                      color: "action.disabled",
-                    },
-                    transition: "all 0.2s ease-in-out",
-                  }}
-                >
-                  {isProcessing ? (
-                    <CircularProgress
-                      size={isMobile ? 20 : 16}
-                      color="inherit"
-                    />
-                  ) : isRecording ? (
-                    <StopIcon fontSize="small" />
-                  ) : (
-                    <MicIcon fontSize="small" />
-                  )}
-                </IconButton>
-              </Tooltip>
-            </Box>
-          ),
-        }}
       />
 
-      {/* Статус записи */}
-      {isRecording && (
+      {/* Отдельные кнопки */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          mt: 1,
+          ml: 0.5,
+        }}
+      >
+        {/* Кнопка микрофона */}
+        <Tooltip
+          title={
+            isRecording ? "Остановить запись (Esc)" : "Начать запись (Ctrl+M)"
+          }
+        >
+          <IconButton
+            size={isMobile ? "medium" : "small"}
+            onClick={handleVoiceInput}
+            disabled={isProcessing}
+            sx={{
+              color: isRecording ? "error.main" : "primary.main",
+              backgroundColor: isRecording ? "error.lighter" : "transparent",
+              "&:hover": {
+                backgroundColor: isRecording ? "error.light" : "action.hover",
+              },
+              "&:disabled": {
+                color: "action.disabled",
+              },
+              transition: "all 0.2s ease-in-out",
+            }}
+          >
+            {isProcessing ? (
+              <CircularProgress size={isMobile ? 20 : 16} color="inherit" />
+            ) : isRecording ? (
+              <StopIcon fontSize="small" />
+            ) : (
+              <MicIcon fontSize="small" />
+            )}
+          </IconButton>
+        </Tooltip>
+
+        {/* Кнопка настроек */}
+        {enableSettings && (
+          <Tooltip title="Настройки голосового ввода">
+            <IconButton
+              size={isMobile ? "medium" : "small"}
+              onClick={(e) => setSettingsAnchor(e.currentTarget)}
+              sx={{
+                color: "text.secondary",
+                "&:hover": { color: "primary.main" },
+              }}
+            >
+              <SettingsIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
+
+        {/* Статус записи */}
+        {isRecording && (
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0.5,
+              color: "error.main",
+              fontSize: "0.875rem",
+              ml: 1,
+              animation: "pulse 1.5s infinite",
+              "@keyframes pulse": {
+                "0%": { opacity: 1 },
+                "50%": { opacity: 0.7 },
+                "100%": { opacity: 1 },
+              },
+            }}
+          >
+            <MicIcon sx={{ fontSize: "1rem" }} />
+            <Box component="span">
+              {isProcessing ? "Обработка..." : "Говорите..."}
+              {showConfidence && confidence > 0 && (
+                <Box component="span" sx={{ ml: 0.5, opacity: 0.8 }}>
+                  ({Math.round(confidence * 100)}%)
+                </Box>
+              )}
+            </Box>
+          </Box>
+        )}
+      </Box>
+
+      {/* Уведомление об автоматической остановке */}
+      {autoStopped && (
         <Box
           sx={{
-            position: "absolute",
-            top: isMobile ? -40 : -32,
-            right: 0,
-            backgroundColor: "error.main",
-            color: "white",
-            px: isMobile ? 2 : 1.5,
-            py: isMobile ? 0.75 : 0.5,
-            borderRadius: isMobile ? "12px" : "8px",
-            fontSize: isMobile ? "0.8rem" : "0.75rem",
+            mt: 1,
+            ml: 0.5,
+            p: 1,
+            borderRadius: "8px",
+            backgroundColor: "success.light",
+            color: "success.contrastText",
+            fontSize: "0.8rem",
             display: "flex",
             alignItems: "center",
             gap: 0.5,
-            zIndex: 1000,
-            animation: "pulse 1.5s infinite",
-            boxShadow: "0 4px 12px rgba(244, 67, 54, 0.3)",
-            "@keyframes pulse": {
-              "0%": { opacity: 1, transform: "scale(1)" },
-              "50%": { opacity: 0.8, transform: "scale(1.02)" },
-              "100%": { opacity: 1, transform: "scale(1)" },
+            animation: "fadeInOut 2s ease-in-out",
+            "@keyframes fadeInOut": {
+              "0%": { opacity: 0, transform: "translateY(-10px)" },
+              "20%": { opacity: 1, transform: "translateY(0)" },
+              "80%": { opacity: 1, transform: "translateY(0)" },
+              "100%": { opacity: 0, transform: "translateY(-10px)" },
             },
           }}
         >
-          <MicIcon sx={{ fontSize: isMobile ? "1rem" : "0.9rem" }} />
-          <Box component="span">
-            {isProcessing ? "Обработка..." : "Говорите..."}
-            {showConfidence && confidence > 0 && (
-              <Box component="span" sx={{ ml: 1, opacity: 0.8 }}>
-                ({Math.round(confidence * 100)}%)
-              </Box>
-            )}
-          </Box>
+          <MicOffIcon sx={{ fontSize: "1rem" }} />
+          <Box component="span">Микрофон автоматически отключен</Box>
         </Box>
       )}
 
@@ -477,6 +776,9 @@ const VoiceTextField = memo(function VoiceTextField({
             Текущий язык:{" "}
             {getSupportedLanguages()[currentLanguage] || currentLanguage}
           </Typography>
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            Автоотключение: {autoStop ? "Включено" : "Выключено"}
+          </Typography>
           <Typography variant="body2" sx={{ mt: 1, fontStyle: "italic" }}>
             Горячие клавиши: Ctrl+M для активации, Esc для остановки
           </Typography>
@@ -484,6 +786,4 @@ const VoiceTextField = memo(function VoiceTextField({
       </Popover>
     </Box>
   );
-});
-
-export default VoiceTextField;
+}
