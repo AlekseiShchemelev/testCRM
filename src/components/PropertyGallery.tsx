@@ -28,20 +28,24 @@ export default function PropertyGallery({
   photos,
   initialIndex = 0,
 }: PropertyGalleryProps) {
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(initialIndex);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(
+    Math.max(0, Math.min(initialIndex || 0, (photos?.length || 1) - 1))
+  );
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const goToNext = useCallback(() => {
+    if (!photos?.length) return;
     setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
   }, [photos.length]);
 
   const goToPrev = useCallback(() => {
+    if (!photos?.length) return;
     setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
   }, [photos.length]);
 
-  // Проверяем наличие фотографий ПОСЛЕ всех хуков
-  if (!photos.length) {
+  // Проверяем наличие фотографий и валидность параметров
+  if (!open || !photos?.length || photos.length === 0) {
     return null;
   }
 
@@ -77,17 +81,18 @@ export default function PropertyGallery({
 
   // Сброс индекса при смене фотографий
   useEffect(() => {
-    if (currentPhotoIndex >= photos.length) {
+    if (photos?.length && currentPhotoIndex >= photos.length) {
       setCurrentPhotoIndex(0);
     }
   }, [photos.length, currentPhotoIndex]);
 
   // Обновление индекса при изменении initialIndex
   useEffect(() => {
-    if (initialIndex !== undefined && initialIndex !== null) {
-      setCurrentPhotoIndex(initialIndex);
+    if (initialIndex !== undefined && initialIndex !== null && photos?.length) {
+      const safeIndex = Math.max(0, Math.min(initialIndex, photos.length - 1));
+      setCurrentPhotoIndex(safeIndex);
     }
-  }, [initialIndex]);
+  }, [initialIndex, photos?.length]);
 
   if (!open) return null;
 
@@ -183,7 +188,7 @@ export default function PropertyGallery({
         {/* Основное изображение */}
         <Box
           component="img"
-          src={photos[currentPhotoIndex]}
+          src={photos?.[currentPhotoIndex] || ""}
           alt={`Фото ${currentPhotoIndex + 1}`}
           sx={{
             maxWidth: isMobile ? "95vw" : "90vw",

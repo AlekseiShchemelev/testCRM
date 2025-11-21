@@ -53,57 +53,20 @@ import { usePreloadComponents } from "../hooks/usePreloadComponents";
  * - Предзагрузка компонентов для оптимизации
  */
 export default function Header() {
-  // Получаем доступ к теме Material UI для консистентности дизайна
   const theme = useTheme();
-
-  // useMediaQuery - хук для определения размера экрана
-  // Возвращает true если ширина экрана меньше "sm" (600px)
-  // Позволяет создавать адаптивный дизайн без CSS медиа-запросов
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
-  // Состояние для мобильного меню (пока не используется, но заготовка)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // useLocation - хук React Router для получения текущего URL
-  // Используется для определения активной страницы
   const location = useLocation();
-
-  /**
-   * Хук для предзагрузки компонентов при наведении
-   *
-   * preloadOnHover - функция, которая загружает компонент в фоне
-   * когда пользователь наводит курсор на навигационную кнопку
-   * Это улучшает производительность - страница открывается мгновенно
-   */
   const { preloadOnHover } = usePreloadComponents();
 
-  /**
-   * Определяет является ли текущая страница активной
-   *
-   * @param {string} path - Путь для проверки
-   * @returns {boolean} true если страница активна
-   *
-   * Логика:
-   * - Для главной страницы "/" проверяем точное совпадение
-   * - Для других страниц проверяем начинается ли URL с пути
-   */
   const isActivePage = (path: string) => {
     if (path === "/" && location.pathname === "/") return true;
     if (path !== "/" && location.pathname.startsWith(path)) return true;
     return false;
   };
 
-  /**
-   * Конфигурация навигационных элементов
-   *
-   * Каждый элемент содержит:
-   * - path: URL для навигации
-   * - label: текст для отображения
-   * - icon: иконка Material UI
-   * - show: условие показа (адаптивность)
-   *
-   * На мобильных скрываем "Клиенты" так как это главная страница
-   */
+  // Конфигурация навигационных элементов
+  // На мобильных скрываем "Клиенты" так как это главная страница
   const navigationItems = [
     {
       path: "/clients",
@@ -126,7 +89,6 @@ export default function Header() {
   ];
 
   return (
-    // Основной контейнер Header: component="header", position="sticky", backdropFilter, zIndex, адаптивные отступы
     <Box
       component="header"
       sx={{
@@ -146,8 +108,6 @@ export default function Header() {
         backdropFilter: "blur(8px)", // Размытие фона для glassmorphism эффекта
       }}
     >
-      // Секция с логотипом и названием приложения: Link из React Router,
-      обычный style объект
       <Link
         to="/"
         style={{
@@ -158,8 +118,6 @@ export default function Header() {
           minWidth: 0, // Важно для правильного сжатия текста
         }}
       >
-        // Логотип приложения: квадратная форма, цвет primary.main, тень, hover
-        эффект, адаптивные размеры
         <Box
           sx={{
             width: { xs: 28, sm: 32 }, // Адаптивная ширина
@@ -182,8 +140,6 @@ export default function Header() {
         >
           R
         </Box>
-        // Название приложения: адаптивный размер шрифта, обрезка текста,
-        ограничение ширины
         <Typography
           variant={isMobile ? "body1" : "h6"} // Адаптивный размер шрифта
           fontWeight="bold"
@@ -199,8 +155,6 @@ export default function Header() {
           RealtorCRM
         </Typography>
       </Link>
-      // Навигационное меню для десктопа: скрыто на мобильных, горизонтальное
-      расположение, адаптивные зазоры
       <Box
         sx={{
           display: { xs: "none", sm: "flex" }, // Скрыто на мобильных
@@ -208,16 +162,13 @@ export default function Header() {
           alignItems: "center",
         }}
       >
-        // Фильтруем элементы по свойству show из конфигурации navigationItems
         {navigationItems
           .filter((item) => item.show)
           .map((item) => (
-            // Навигационная кнопка: component={Link}, динамический variant, hover эффекты, предзагрузка
             <Button
               key={item.path} // Ключ для React (уникальный идентификатор)
               component={Link} // Используем Link вместо обычной кнопки
               to={item.path} // URL для навигации
-              // Динамический variant: "contained" для активной, "outlined" для неактивной страницы
               variant={isActivePage(item.path) ? "contained" : "outlined"}
               size={isMobile ? "small" : "medium"} // Адаптивный размер кнопки
               sx={{
@@ -262,7 +213,6 @@ export default function Header() {
                 transition: "all 0.2s ease-in-out", // Плавные переходы
               }}
               startIcon={item.icon} // Иконка слева от текста
-              // Предзагрузка компонентов: динамический импорт для улучшения производительности
               onMouseEnter={preloadOnHover(
                 () =>
                   import(
@@ -276,8 +226,6 @@ export default function Header() {
                 `${item.path}Page`
               )}
             >
-              // Текст кнопки навигации: скрыт на мобильных, показан на
-              планшетах, Box для контроля стилей
               <Box
                 component="span"
                 sx={{ display: { xs: "none", md: "inline" } }} // Адаптивность
@@ -287,16 +235,11 @@ export default function Header() {
             </Button>
           ))}
       </Box>
-      // Мобильное меню: показывается только на мобильных, исключает "Клиенты",
-      только иконки
       {isMobile && (
         <Box sx={{ display: "flex", gap: 1 }}>
-          // Фильтруем элементы для мобильного меню: item.show должен
-          показываться, исключаем "/clients"
           {navigationItems
             .filter((item) => item.show && item.path !== "/clients")
             .map((item) => (
-              // Мобильная кнопка: size="small", только иконка, высота 40px, упрощенные hover эффекты
               <Button
                 key={item.path}
                 component={Link}
@@ -333,7 +276,6 @@ export default function Header() {
                       : "primary.main",
                   },
                 }}
-                // Предзагрузка компонентов: упрощенная логика для 2 страниц в мобильном меню
                 onMouseEnter={preloadOnHover(
                   () =>
                     import(
@@ -351,8 +293,6 @@ export default function Header() {
             ))}
         </Box>
       )}
-      // Индикатор активной страницы: показывается только на мобильных, полоса
-      внизу Header, основной цвет темы
       {isMobile && (
         <Box
           sx={{

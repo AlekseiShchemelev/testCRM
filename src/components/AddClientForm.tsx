@@ -560,7 +560,7 @@ export default function AddClientForm({
         open={selectedPhotoIndex !== null}
         onClose={closePhotoViewer}
         photos={photos}
-        initialIndex={selectedPhotoIndex}
+        initialIndex={selectedPhotoIndex ?? 0}
       />
     </Dialog>
   );
