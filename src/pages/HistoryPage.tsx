@@ -25,6 +25,7 @@ import {
 
 export default function HistoryPage() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
   const [clearConfirm, setClearConfirm] = useState(false);
   const [clearing, setClearing] = useState(false);
 
@@ -34,6 +35,7 @@ export default function HistoryPage() {
 
   useEffect(() => {
     loadHistory();
+    loadClients();
   }, []);
 
   const loadHistory = async () => {
@@ -43,6 +45,28 @@ export default function HistoryPage() {
     } catch (err: any) {
       console.error("Ошибка загрузки истории:", err);
       showError(err.message || "Не удалось загрузить историю");
+    }
+  };
+
+  const loadClients = () => {
+    try {
+      // Пробуем разные возможные ключи
+      const clientsData = localStorage.getItem("clients");
+      const customersData = localStorage.getItem("customers");
+
+      if (clientsData) {
+        const parsedClients = JSON.parse(clientsData);
+        setClients(parsedClients);
+        console.log("Загружены клиенты из localStorage:", parsedClients);
+      } else if (customersData) {
+        const parsedCustomers = JSON.parse(customersData);
+        setClients(parsedCustomers);
+        console.log("Загружены клиенты из customers:", parsedCustomers);
+      } else {
+        console.log("Клиенты не найдены в localStorage");
+      }
+    } catch (error) {
+      console.error("Ошибка загрузки клиентов:", error);
     }
   };
 

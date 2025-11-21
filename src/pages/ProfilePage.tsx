@@ -46,6 +46,23 @@ export default function ProfilePage() {
   const auth = getAuth();
   const navigate = useNavigate();
 
+  const loadClients = () => {
+    try {
+      const clientsData = localStorage.getItem("clients");
+      const customersData = localStorage.getItem("customers");
+
+      if (clientsData) {
+        const parsedClients = JSON.parse(clientsData);
+        console.log("Загружены клиенты в профиле:", parsedClients);
+      } else if (customersData) {
+        const parsedCustomers = JSON.parse(customersData);
+        console.log("Загружены customers в профиле:", parsedCustomers);
+      }
+    } catch (error) {
+      console.error("Ошибка загрузки клиентов в профиле:", error);
+    }
+  };
+
   useEffect(() => {
     const user = auth.currentUser;
     if (user) {
@@ -65,6 +82,7 @@ export default function ProfilePage() {
       }
     };
     loadHistory();
+    loadClients();
   }, [auth, navigate]);
 
   const handleExportToExcel = () => {

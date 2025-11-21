@@ -1,6 +1,30 @@
 // src/utils/exportUtils.ts - Утилиты для экспорта данных
 
 /**
+ * Получает клиентов из различных источников данных
+ */
+const getClientsData = (): any[] => {
+  try {
+    // Пробуем разные возможные ключи в localStorage
+    const clients = localStorage.getItem("clients");
+    if (clients) {
+      return JSON.parse(clients);
+    }
+
+    // Пробуем другие возможные ключи
+    const customerData = localStorage.getItem("customers");
+    if (customerData) {
+      return JSON.parse(customerData);
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Ошибка при получении данных клиентов:", error);
+    return [];
+  }
+};
+
+/**
  * Экспортирует историю действий в CSV файл с полной информацией о клиентах
  * @param history - массив записей истории
  * @param filename - имя файла для скачивания
@@ -13,7 +37,9 @@ export const exportHistoryToCSV = (
 ) => {
   try {
     // Получаем всех клиентов для дополнительной информации
-    const clients = JSON.parse(localStorage.getItem("clients") || "[]");
+    const clients = getClientsData();
+    console.log("Клиенты для экспорта:", clients);
+    console.log("История для экспорта:", history);
 
     const headers = [
       "Дата и время",
@@ -29,6 +55,7 @@ export const exportHistoryToCSV = (
 
     const csvRows = history.map((h) => {
       const client = clients.find((c: any) => c.id === h.clientId);
+      console.log("Для записи истории:", h, "Найден клиент:", client);
 
       // Форматируем действие для читаемости
       let actionText = "";
@@ -67,17 +94,24 @@ export const exportHistoryToCSV = (
         return stringField;
       };
 
+      const clientName =
+        client?.fullName || client?.name || client?.clientName || "Неизвестно";
+      const clientPhone = client?.phone || client?.phoneNumber || "";
+      const clientAddress = client?.address || "";
+      const meetingDate = client?.meetingDate
+        ? new Date(client.meetingDate).toLocaleString("ru-RU")
+        : "";
+      const listingUrl = client?.listingUrl || client?.url || "";
+
       return [
         new Date(h.timestamp).toLocaleString("ru-RU"),
         actionText,
         h.clientId,
-        client?.fullName || "Неизвестно",
-        client?.phone || "",
-        client?.address || "",
-        client?.meetingDate
-          ? new Date(client.meetingDate).toLocaleString("ru-RU")
-          : "",
-        client?.listingUrl || "",
+        clientName,
+        clientPhone,
+        clientAddress,
+        meetingDate,
+        listingUrl,
         h.details || "",
       ].map(escapeCSV);
     });
