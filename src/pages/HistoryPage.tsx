@@ -18,6 +18,10 @@ import type { HistoryEntry } from "../types";
 import { getHistory, clearHistory } from "../services/historyService";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useNotifications } from "../hooks/useNotifications";
+import {
+  exportHistoryToCSV,
+  createFilenameWithDate,
+} from "../utils/exportUtils";
 
 export default function HistoryPage() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -43,84 +47,12 @@ export default function HistoryPage() {
   };
 
   const handleExportToExcel = () => {
-    // Получаем всех клиентов для доп. информации
-    const clients = JSON.parse(localStorage.getItem("clients") || "[]");
+    const filename = createFilenameWithDate("history");
+    exportHistoryToCSV(history, filename, showSuccess);
+  };
 
-    const headers = [
-      "Дата и время",
-      "Действие",
-      "ID клиента",
-      "ФИО клиента",
-      "Телефон",
-      "Адрес",
-      "Дата и время встречи",
-      "Ссылка на объявление",
-      "Детали",
-    ];
-
-    const csvRows = history.map((h) => {
-      const client = clients.find((c: any) => c.id === h.clientId);
-
-      // Форматируем действие для читаемости
-      let actionText = "";
-      switch (h.action) {
-        case "created":
-          actionText = "Создан";
-          break;
-        case "updated":
-          actionText = "Изменен";
-          break;
-        case "deleted":
-          actionText = "Удален";
-          break;
-        case "meeting_completed":
-          actionText = "Встреча завершена";
-          break;
-        case "meeting_cancelled":
-          actionText = "Встреча отменена";
-          break;
-        default:
-          actionText = h.action;
-      }
-
-      return [
-        new Date(h.timestamp).toLocaleString("ru-RU"),
-        actionText,
-        h.clientId,
-        client?.fullName || "Неизвестно",
-        client?.phone || "",
-        client?.address || "",
-        client?.meetingDate
-          ? new Date(client.meetingDate).toLocaleString("ru-RU")
-          : "",
-        client?.listingUrl || "",
-        h.details || "",
-      ];
-    });
-
-    const content = [
-      headers.join("\t"),
-      ...csvRows.map((row) => row.join("\t")),
-    ].join("\n");
-
-    const blob = new Blob(["\uFEFF" + content], {
-      type: "text/csv; charset=utf-8",
-    });
-
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `history_${new Date().toISOString().split("T")[0]}.csv`
-    );
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    showSuccess("История экспортирована с полной информацией о клиентах");
+  const handleClearAll = () => {
+    setClearConfirm(true);
   };
 
   const confirmClearAll = async () => {
