@@ -85,9 +85,14 @@ export default function ProfilePage() {
     loadClients();
   }, [auth, navigate]);
 
-  const handleExportToExcel = () => {
-    const filename = createFilenameWithDate("profile_history");
-    exportHistoryToCSV(history, filename, showSuccess);
+  const handleExportToExcel = async () => {
+    try {
+      const filename = createFilenameWithDate("profile_history");
+      await exportHistoryToCSV(history, filename, showSuccess);
+    } catch (error) {
+      console.error("Ошибка экспорта:", error);
+      showError("Не удалось экспортировать историю");
+    }
   };
 
   const handleClearAll = () => {

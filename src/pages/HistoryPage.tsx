@@ -4,13 +4,12 @@ import {
   Box,
   Typography,
   Paper,
-  IconButton,
+  CircularProgress,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
 import {
   Download,
-  Delete as DeleteIcon,
   History as HistoryIcon,
   Clear as ClearIcon,
 } from "@mui/icons-material";
@@ -25,9 +24,9 @@ import {
 
 export default function HistoryPage() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
   const [clearConfirm, setClearConfirm] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const { showSuccess, showError } = useNotifications();
   const theme = useTheme();
@@ -35,7 +34,6 @@ export default function HistoryPage() {
 
   useEffect(() => {
     loadHistory();
-    loadClients();
   }, []);
 
   const loadHistory = async () => {
@@ -48,31 +46,17 @@ export default function HistoryPage() {
     }
   };
 
-  const loadClients = () => {
+  const handleExportToExcel = async () => {
+    setExporting(true);
     try {
-      // Пробуем разные возможные ключи
-      const clientsData = localStorage.getItem("clients");
-      const customersData = localStorage.getItem("customers");
-
-      if (clientsData) {
-        const parsedClients = JSON.parse(clientsData);
-        setClients(parsedClients);
-        console.log("Загружены клиенты из localStorage:", parsedClients);
-      } else if (customersData) {
-        const parsedCustomers = JSON.parse(customersData);
-        setClients(parsedCustomers);
-        console.log("Загружены клиенты из customers:", parsedCustomers);
-      } else {
-        console.log("Клиенты не найдены в localStorage");
-      }
+      const filename = createFilenameWithDate("history");
+      await exportHistoryToCSV(history, filename, showSuccess);
     } catch (error) {
-      console.error("Ошибка загрузки клиентов:", error);
+      console.error("Ошибка экспорта:", error);
+      showError("Не удалось экспортировать историю");
+    } finally {
+      setExporting(false);
     }
-  };
-
-  const handleExportToExcel = () => {
-    const filename = createFilenameWithDate("history");
-    exportHistoryToCSV(history, filename, showSuccess);
   };
 
   const handleClearAll = () => {
@@ -164,8 +148,9 @@ export default function HistoryPage() {
       >
         <Button
           variant="outlined"
-          startIcon={<Download />}
+          startIcon={exporting ? <CircularProgress size={20} /> : <Download />}
           onClick={handleExportToExcel}
+          disabled={exporting || history.length === 0}
           sx={{
             minWidth: { xs: "100%", sm: "auto" },
             height: { xs: 48, sm: 56 },
@@ -179,19 +164,23 @@ export default function HistoryPage() {
               backgroundColor: "primary.lighter",
               borderColor: "primary.dark",
             },
+            "&:disabled": {
+              borderColor: "action.disabled",
+              color: "action.disabled",
+            },
           }}
         >
           <Box component="span" sx={{ display: { xs: "inline", sm: "none" } }}>
-            Экспорт истории
+            {exporting ? "Экспорт..." : "Экспорт истории"}
           </Box>
           <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
-            Экспорт в CSV
+            {exporting ? "Экспорт..." : "Экспорт в CSV"}
           </Box>
         </Button>
         <Button
           variant="contained"
           color="error"
-          startIcon={<ClearIcon />}
+          startIcon={clearing ? <CircularProgress size={20} /> : <ClearIcon />}
           onClick={handleClearAll}
           disabled={history.length === 0 || clearing}
           sx={{

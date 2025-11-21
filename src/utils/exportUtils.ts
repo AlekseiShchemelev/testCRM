@@ -1,25 +1,34 @@
 // src/utils/exportUtils.ts - Утилиты для экспорта данных
 
 /**
- * Получает клиентов из различных источников данных
+ * Получает клиентов из Firebase через clientService
  */
-const getClientsData = (): any[] => {
+const getClientsFromFirebase = async (): Promise<any[]> => {
   try {
-    // Пробуем разные возможные ключи в localStorage
-    const clients = localStorage.getItem("clients");
-    if (clients) {
-      return JSON.parse(clients);
-    }
+    console.log("🔍 Получение клиентов из Firebase...");
 
-    // Пробуем другие возможные ключи
-    const customerData = localStorage.getItem("customers");
-    if (customerData) {
-      return JSON.parse(customerData);
-    }
+    // Импортируем функцию getClients из clientService
+    const { getClients } = await import("../services/clientService");
 
-    return [];
+    // Получаем клиентов из Firebase
+    const clients = await getClients();
+    console.log("✅ Клиенты из Firebase:", clients);
+
+    return clients || [];
   } catch (error) {
-    console.error("Ошибка при получении данных клиентов:", error);
+    console.error("❌ Ошибка при получении клиентов из Firebase:", error);
+
+    // Пробуем получить из localStorage как fallback
+    try {
+      const localData = localStorage.getItem("clients");
+      if (localData) {
+        console.log("✅ Используем клиенты из localStorage");
+        return JSON.parse(localData);
+      }
+    } catch (localError) {
+      console.error("❌ Ошибка при получении из localStorage:", localError);
+    }
+
     return [];
   }
 };
@@ -30,16 +39,18 @@ const getClientsData = (): any[] => {
  * @param filename - имя файла для скачивания
  * @param showSuccess - функция для показа успешного сообщения
  */
-export const exportHistoryToCSV = (
+export const exportHistoryToCSV = async (
   history: any[],
   filename: string,
   showSuccess?: (message: string) => void
 ) => {
   try {
-    // Получаем всех клиентов для дополнительной информации
-    const clients = getClientsData();
-    console.log("Клиенты для экспорта:", clients);
-    console.log("История для экспорта:", history);
+    console.log("📊 Начало экспорта истории...");
+
+    // Получаем всех клиентов из Firebase
+    const clients = await getClientsFromFirebase();
+    console.log("📋 Всего клиентов из Firebase:", clients.length);
+    console.log("📝 Записей истории:", history.length);
 
     const headers = [
       "Дата и время",
@@ -54,8 +65,15 @@ export const exportHistoryToCSV = (
     ];
 
     const csvRows = history.map((h) => {
+      // Ищем клиента по ID
       const client = clients.find((c: any) => c.id === h.clientId);
-      console.log("Для записи истории:", h, "Найден клиент:", client);
+
+      console.log("🔍 Поиск клиента для записи:", {
+        historyId: h.id,
+        clientId: h.clientId,
+        найденКлиент: client ? "✅" : "❌",
+        имяКлиента: client?.fullName || "Не найдено",
+      });
 
       // Форматируем действие для читаемости
       let actionText = "";
@@ -94,14 +112,14 @@ export const exportHistoryToCSV = (
         return stringField;
       };
 
-      const clientName =
-        client?.fullName || client?.name || client?.clientName || "Неизвестно";
-      const clientPhone = client?.phone || client?.phoneNumber || "";
+      // Получаем данные клиента
+      const clientName = client?.fullName || "Неизвестно";
+      const clientPhone = client?.phone || "";
       const clientAddress = client?.address || "";
       const meetingDate = client?.meetingDate
         ? new Date(client.meetingDate).toLocaleString("ru-RU")
         : "";
-      const listingUrl = client?.listingUrl || client?.url || "";
+      const listingUrl = client?.listingUrl || "";
 
       return [
         new Date(h.timestamp).toLocaleString("ru-RU"),
@@ -140,7 +158,7 @@ export const exportHistoryToCSV = (
       showSuccess(`История экспортирована (${history.length} записей)`);
     }
   } catch (error) {
-    console.error("Ошибка при экспорте истории:", error);
+    console.error("❌ Ошибка при экспорте истории:", error);
     if (showSuccess) {
       showSuccess("Произошла ошибка при экспорте истории");
     }
